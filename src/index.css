@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --color-accent-kcal: #3B82F6;
+  --color-accent-protein: #EF4444;
+  --color-accent-carbs: #10B981;
+  --color-accent-fats: #F59E0B;
+}
+
+:root {
+  --color-bg-base: #FAFAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-variant: #F4F4F6;
+  --color-on-surface: #09090B;
+  --color-on-surface-variant: #71717A;
+  --color-outline: #E4E4E7;
+  
+  --color-accent-kcal: #2563EB;
+  --color-accent-protein: #DC2626;
+  --color-accent-carbs: #059669;
+  --color-accent-fats: #D97706;
+}
+
+.dark {
+  --color-bg-base: #060608;
+  --color-surface: #0F0F12;
+  --color-surface-variant: #18181C;
+  --color-on-surface: #FAFAFA;
+  --color-on-surface-variant: #A1A1AA;
+  --color-outline: #1E1E24;
+  
+  --color-accent-kcal: #3B82F6;
+  --color-accent-protein: #EF4444;
+  --color-accent-carbs: #10B981;
+  --color-accent-fats: #F59E0B;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-base);
+  color: var(--color-on-surface);
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  letter-spacing: -0.01em;
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Glassmorphism and Elegant UI overlays */
+.ambient-glow-purple {
+  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, rgba(139, 92, 246, 0) 70%);
+}
+
+.ambient-glow-emerald {
+  background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.12) 0%, rgba(16, 185, 129, 0) 70%);
+}
+
+.ambient-glow-rose {
+  background: radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.12) 0%, rgba(244, 63, 94, 0) 70%);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass-card {
+  background: rgba(15, 15, 18, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Scrollbar styling */
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Elegant progress rings shadow/glow */
+.glow-kcal {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+}
+.glow-protein {
+  filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.4));
+}
+.glow-carbs {
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
+}
+.glow-fats {
+  filter: drop-shadow(0 0 8px rgba(245, 158, 11, 0.4));
+}
+.glow-fiber {
+  filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
+}
