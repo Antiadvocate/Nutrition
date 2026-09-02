@@ -9,6 +9,7 @@ import {
   Zap
 } from 'lucide-react';
 import { toast } from './ui/Toaster';
+import DataPanel from './DataPanel';
 
 const DAYS = [
   { label: 'Sun', index: 0 },
@@ -174,6 +175,12 @@ export default function Targets() {
           </button>
         </div>
       </div>
+
+      <div className="space-y-1 pt-2">
+        <h2 className="text-lg font-black text-[var(--color-on-surface)] tracking-tight">Data</h2>
+        <p className="text-xs text-[var(--color-on-surface-variant)]">Hydration goal, and getting your log in and out.</p>
+      </div>
+      <DataPanel />
     </div>
   );
 }

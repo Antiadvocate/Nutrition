@@ -52,7 +52,7 @@ export default function Insights() {
   // Weekly Calculations (Last 7 Days)
   const weeklyData = useMemo(() => {
     const daysArr = Array.from({ length: 7 }).map((_, i) => {
-      const d = subDays(new Date(), i);
+      const d = subDays(currentDate, i);
       const k = format(d, 'yyyy-MM-dd');
       return state.days?.[k] || { entries: [] as FoodEntry[] };
     });
@@ -106,7 +106,7 @@ export default function Insights() {
       allEntries: allWeeklyEntries,
       daysWithLogs: totalDaysWithLogs
     };
-  }, [state.days]);
+  }, [state.days, currentDate]);
 
   // Guidelines levels
   const microTargets = {

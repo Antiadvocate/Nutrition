@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore, FoodEntry } from '../store/StoreContext';
 import { Trash2, Heart, Edit2, Check, Scale, Clock, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from './ui/Toaster';
 
 export default function EntryList() {
   const { currentDayData } = useStore();
@@ -182,11 +183,19 @@ const getFoodTypeTheme = (entry: FoodEntry, index: number) => {
 };
 
 const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index }) => {
-  const { deleteEntry, toggleFavorite, updateEntry, state } = useStore();
+  const { deleteEntry, restoreEntry, toggleFavorite, updateEntry, state } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [newWeight, setNewWeight] = useState(entry.baseQuantity.toString());
+  const [newWeight, setNewWeight] = useState(String(entry.baseQuantity ?? 1));
   const [newTime, setNewTime] = useState(entry.time || '');
+
+  // Keep the draft in step when the entry changes underneath us (an undo, an
+  // import, a repeat re-materialising) rather than showing a stale number.
+  useEffect(() => {
+    if (isEditing) return;
+    setNewWeight(String(entry.baseQuantity ?? 1));
+    setNewTime(entry.time || '');
+  }, [entry.baseQuantity, entry.time, isEditing]);
 
   const isFav = state.favorites.some(f => f.simpleName === entry.simpleName);
 
@@ -196,17 +205,38 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
     const updatedFields: Partial<FoodEntry> = {
       time: newTime,
     };
+    // Older entries and imported backups can be missing macrosPerUnit; derive it
+    // from the logged totals rather than throwing when someone edits a portion.
+    const base = entry.baseQuantity || 1;
+    const perUnit = entry.macrosPerUnit || {
+      calories: (entry.calories || 0) / base,
+      protein: (entry.protein || 0) / base,
+      carbs: (entry.carbs || 0) / base,
+      fats: (entry.fats || 0) / base,
+      fiber: (entry.fiber || 0) / base,
+    };
     if (!isNaN(weight) && weight > 0) {
       updatedFields.baseQuantity = weight;
       updatedFields.quantity = `${weight} ${entry.unit}`;
-      updatedFields.calories = entry.macrosPerUnit.calories * weight;
-      updatedFields.protein = entry.macrosPerUnit.protein * weight;
-      updatedFields.carbs = entry.macrosPerUnit.carbs * weight;
-      updatedFields.fats = entry.macrosPerUnit.fats * weight;
-      updatedFields.fiber = entry.macrosPerUnit.fiber * weight;
+      updatedFields.macrosPerUnit = perUnit;
+      updatedFields.calories = perUnit.calories * weight;
+      updatedFields.protein = perUnit.protein * weight;
+      updatedFields.carbs = perUnit.carbs * weight;
+      updatedFields.fats = perUnit.fats * weight;
+      updatedFields.fiber = perUnit.fiber * weight;
     }
     updateEntry(entry.id, updatedFields);
     setIsEditing(false);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const removed = entry;
+    const position = index;
+    deleteEntry(entry.id);
+    toast(`Removed ${removed.simpleName}`, {
+      action: { label: 'Undo', onClick: () => restoreEntry(removed, position) },
+    });
   };
 
   const theme = getFoodTypeTheme(entry, index);
@@ -450,10 +480,7 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
               {/* Action Button: Delete Log */}
               {!isEditing && (
                 <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteEntry(entry.id);
-                  }}
+                  onClick={handleDelete}
                   className="w-8 h-8 rounded-lg bg-[var(--color-surface-variant)] hover:bg-rose-500/10 border border-[var(--color-outline)] hover:border-rose-500/25 text-[var(--color-on-surface-variant)] hover:text-rose-500 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer"
                   title="Delete log"
                   aria-label="Delete entry"

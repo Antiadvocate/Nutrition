@@ -26,17 +26,22 @@ import {
   Lightbulb,
   XCircle,
   TrendingUp,
-  Settings2
+  Settings2,
+  Moon,
+  Sun,
+  Plus
 } from 'lucide-react';
 import { autoCompleteDayMeals } from '../lib/ai';
 import { generateId } from '../lib/utils';
 import { toast } from './ui/Toaster';
 import { openAISettings } from './AISettings';
+import { hasKey } from '../lib/openrouter';
+import WaterCard from './WaterCard';
 
 type TimeWindow = '1W' | '1M' | '3M' | '6M' | 'Custom';
 
 export default function Dashboard() {
-  const { currentDayData, state, currentDate, setCurrentDate, addEntry } = useStore();
+  const { currentDayData, state, currentDate, setCurrentDate, addEntry, toggleTheme } = useStore();
   const profileId = state.dayProfiles?.[currentDate.getDay()];
   const targets = state.profiles?.find(p => p.id === profileId)?.macros || { calories: 2000, protein: 150, carbs: 200, fats: 65, fiber: 30 };
   
@@ -86,6 +91,12 @@ export default function Dashboard() {
   };
 
   const handleSmartComplete = async (isHealthy: boolean) => {
+    if (!hasKey()) {
+      toast('Add an OpenRouter key to use smart pre-fill.', {
+        action: { label: 'Settings', onClick: openAISettings },
+      });
+      return;
+    }
     if (remaining.calories < 50 && remaining.protein < 5 && remaining.carbs < 5 && remaining.fats < 5) {
       toast("You've already hit your targets today!");
       return;
@@ -231,15 +242,41 @@ export default function Dashboard() {
           </h1>
         </div>
 
-        <button
-          onClick={openAISettings}
-          className="self-start md:self-auto flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] transition-all active:scale-95 cursor-pointer shadow-3xs"
-          title="AI engine & models"
-        >
-          <Settings2 size={13} className="text-purple-400" />
-          <span>AI Engine</span>
-        </button>
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-3xs"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            {state.theme === 'dark'
+              ? <Sun size={15} className="text-amber-400" />
+              : <Moon size={15} className="text-zinc-600" />}
+          </button>
+          <button
+            onClick={openAISettings}
+            className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] transition-all active:scale-95 cursor-pointer shadow-3xs"
+            title="AI engine & models"
+          >
+            <Settings2 size={13} className="text-purple-400" />
+            <span>AI Engine</span>
+          </button>
+        </div>
       </div>
+
+      {entries.length === 0 && (
+        <div className="bg-[var(--color-surface)] border border-dashed border-[var(--color-outline)] rounded-3xl p-5 flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-[var(--color-on-surface)] text-[var(--color-bg-base)] flex items-center justify-center flex-shrink-0">
+            <Plus size={18} strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-black text-[var(--color-on-surface)]">Nothing logged for this day yet</p>
+            <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed mt-0.5">
+              Tap the + button below to photograph a plate, describe a meal, or type the numbers in yourself.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Focus: Daily Goals & Rings */}
       <div className="space-y-6">
@@ -413,6 +450,8 @@ export default function Dashboard() {
           </div>
 
         </div>
+
+        <WaterCard />
 
         {/* View Toggle Mode Selector & Auto-fill actions */}
         <div className="flex flex-col items-center gap-3 mt-6">

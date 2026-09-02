@@ -5,6 +5,8 @@ import { analyzeFood } from '../lib/ai';
 import { format } from 'date-fns';
 import { generateId, readImageDownscaled } from '../lib/utils';
 import { toast } from './ui/Toaster';
+import { hasKey } from '../lib/openrouter';
+import { openAISettings } from './AISettings';
 
 export default function AddFood() {
   const [activeTab, setActiveTab] = useState('search');
@@ -45,6 +47,13 @@ export default function AddFood() {
     const textQuery = isScan ? (query || "Analyze the food in this image.") : (isAi ? aiPrompt : query);
     if (!textQuery && !isScan) return;
     if (isScan && images.length === 0) return;
+    // Fail before the request rather than after, and send them somewhere useful.
+    if (!hasKey()) {
+      toast('Add an OpenRouter key to use AI logging.', {
+        action: { label: 'Settings', onClick: openAISettings },
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -139,7 +148,7 @@ export default function AddFood() {
       {/* Top Floating Tab Capsule Menu */}
       <div className="px-4 pt-6 pb-2 max-w-2xl mx-auto">
         <div className="flex items-center gap-1.5 p-1 bg-[var(--color-surface)] border border-[var(--color-outline)] rounded-2xl overflow-x-auto scrollbar-hide shadow-3xs">
-          <Tab icon={<Search size={14}/>} label="Search" active={activeTab === 'search'} onClick={() => setActiveTab('search')} />
+          <Tab icon={<Search size={14}/>} label="Quick Log" active={activeTab === 'search'} onClick={() => setActiveTab('search')} />
           <Tab icon={<Scan size={14}/>} label="Scan Camera" active={activeTab === 'scan'} onClick={() => setActiveTab('scan')} />
           <Tab icon={<Sparkles size={14}/>} label="AI Log" active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
           <Tab icon={<Zap size={14}/>} label="Quick Add" active={activeTab === 'quick_add'} onClick={() => setActiveTab('quick_add')} />
@@ -150,6 +159,10 @@ export default function AddFood() {
       {/* Content based on tab */}
       {activeTab === 'search' && (
         <div className="px-4 py-4 max-w-2xl mx-auto">
+          <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium mb-3 leading-relaxed">
+            One line in, full macros out. This is an AI estimate, not a database lookup — include the portion for a
+            closer number. Free of charge only if your chosen model is.
+          </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-[var(--color-surface)] rounded-2xl flex items-center px-4 shadow-3xs border border-[var(--color-outline)] focus-within:border-[var(--color-on-surface)] transition-colors">
               <Search size={18} className="text-[var(--color-on-surface-variant)]" />
@@ -158,7 +171,7 @@ export default function AddFood() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleLog(false, false)}
-                placeholder="Search food item (e.g., '1 poached egg')"
+                placeholder="Name a food and portion (e.g., '1 poached egg')"
                 className="w-full bg-transparent border-none outline-none px-3 py-3.5 text-[var(--color-on-surface)] placeholder-[var(--color-on-surface-variant)] text-xs font-bold"
               />
             </div>
@@ -247,6 +260,9 @@ export default function AddFood() {
             <textarea 
               value={aiPrompt}
               onChange={e => setAiPrompt(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleLog(false, true);
+              }}
               placeholder="e.g. 'Stir-fried tofu, 150g jasmine rice and 2 tbsp peanut dressing after training...'"
               className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl p-4 outline-none focus:ring-1 focus:ring-[var(--color-on-surface)] transition-all min-h-[110px] resize-none text-xs font-medium leading-relaxed"
             />

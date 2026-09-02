@@ -12,6 +12,10 @@ import {
   BrainCircuit
 } from 'lucide-react';
 import Markdown from 'react-markdown';
+import { format } from 'date-fns';
+import { getBriefing, setBriefing, pruneLegacyBriefingKeys } from '../lib/briefingCache';
+import { hasKey } from '../lib/openrouter';
+import { openAISettings } from './AISettings';
 
 type CoachSubTab = 'briefing' | 'chat';
 type BriefingPeriod = 'daily' | 'weekly';
@@ -75,21 +79,24 @@ export default function AICoach() {
   const profileId = state.dayProfiles?.[currentDate.getDay()];
   const targets = state.profiles?.find(p => p.id === profileId) || { macros: { calories: 2000, protein: 150, carbs: 200, fats: 65, fiber: 30 } };
 
+  const dailyCacheKey = `${format(currentDate, 'yyyy-MM-dd')}_${entries.length}_${Math.round(totals.calories)}`;
+  const weeklyCacheKey = String(Object.keys(state.days || {}).length);
+
   // Fetch or Load Cached Daily Briefing
   const loadDailyBriefing = async (forceInit = false) => {
-    const cacheKey = `daily_brief_${currentDate.toISOString().split('T')[0]}_count_${entries.length}_cal_${Math.round(totals.calories)}`;
-    const cached = localStorage.getItem(cacheKey);
+    const cached = getBriefing('daily', dailyCacheKey);
 
     if (cached && !forceInit) {
       setDailyBrief(cached);
       return;
     }
+    if (!hasKey()) return;
 
     setLoadingDaily(true);
     try {
       const result = await generateDailyBriefing(entries, targets.macros, totals);
       setDailyBrief(result);
-      localStorage.setItem(cacheKey, result);
+      setBriefing('daily', dailyCacheKey, result);
     } catch (e: any) {
       console.error(e);
       setDailyBrief(`The Void has experienced an obstruction.\n\n\`${e?.message || 'Unknown error'}\``);
@@ -100,20 +107,19 @@ export default function AICoach() {
 
   // Fetch or Load Cached Weekly Briefing
   const loadWeeklyBriefing = async (forceInit = false) => {
-    const dayCount = Object.keys(state.days || {}).length;
-    const cacheKey = `weekly_brief_days_${dayCount}`;
-    const cached = localStorage.getItem(cacheKey);
+    const cached = getBriefing('weekly', weeklyCacheKey);
 
     if (cached && !forceInit) {
       setWeeklyBrief(cached);
       return;
     }
+    if (!hasKey()) return;
 
     setLoadingWeekly(true);
     try {
       const result = await generateWeeklyBriefing(state.days || {}, state.profiles || [], state.dayProfiles || {});
       setWeeklyBrief(result);
-      localStorage.setItem(cacheKey, result);
+      setBriefing('weekly', weeklyCacheKey, result);
     } catch (e: any) {
       console.error(e);
       setWeeklyBrief(`Error formulating your weekly breakdown.\n\n\`${e?.message || 'Unknown error'}\``);
@@ -122,16 +128,20 @@ export default function AICoach() {
     }
   };
 
-  // Auto trigger initial load
   useEffect(() => {
-    if (activeTab === 'briefing') {
-      if (period === 'daily') {
-        loadDailyBriefing();
-      } else {
-        loadWeeklyBriefing();
-      }
+    pruneLegacyBriefingKeys();
+  }, []);
+
+  // Show a cached briefing straight away, but never fire a paid request without
+  // an explicit tap — the old effect re-ran on every log edit.
+  useEffect(() => {
+    if (activeTab !== 'briefing') return;
+    if (period === 'daily') {
+      setDailyBrief(getBriefing('daily', dailyCacheKey) || '');
+    } else {
+      setWeeklyBrief(getBriefing('weekly', weeklyCacheKey) || '');
     }
-  }, [activeTab, period, currentDate, entries.length]);
+  }, [activeTab, period, dailyCacheKey, weeklyCacheKey]);
 
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -242,9 +252,12 @@ export default function AICoach() {
                   {dailyBrief ? (
                     <ElegantMarkdown>{dailyBrief}</ElegantMarkdown>
                   ) : (
-                    <div className="text-center py-6 text-sm text-[var(--color-on-surface-variant)]">
-                      No feedback generated yet. Log some ingredients or tap the refresh circle above.
-                    </div>
+                    <BriefingPrompt
+                      label="Generate today's briefing"
+                      hint={entries.length ? 'One request to your text model, cached until the day changes.' : 'Log something first, then ask for a read on the day.'}
+                      disabled={!entries.length}
+                      onGenerate={() => loadDailyBriefing(true)}
+                    />
                   )}
                 </div>
               )}
@@ -267,9 +280,12 @@ export default function AICoach() {
                   {weeklyBrief ? (
                     <ElegantMarkdown>{weeklyBrief}</ElegantMarkdown>
                   ) : (
-                    <div className="text-center py-6 text-sm text-[var(--color-on-surface-variant)]">
-                      Record food details over multiple calendar days to retrieve a deep baseline scorecard.
-                    </div>
+                    <BriefingPrompt
+                      label="Generate weekly scorecard"
+                      hint={Object.keys(state.days || {}).length ? 'Looks across every day you have logged.' : 'Log a few days first to give it a baseline.'}
+                      disabled={!Object.keys(state.days || {}).length}
+                      onGenerate={() => loadWeeklyBriefing(true)}
+                    />
                   )}
                 </div>
               )}
@@ -292,6 +308,9 @@ export default function AICoach() {
               <textarea
                 value={question}
                 onChange={e => setQuestion(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAsk(e as any);
+                }}
                 placeholder="e.g., I have 40g protein and 200kcal remaining. What simple minimally processed snack works?"
                 className="w-full bg-[var(--color-surface-variant)] border border-[var(--color-outline)] rounded-2xl p-4 text-xs font-medium text-[var(--color-on-surface)] placeholder-[var(--color-on-surface-variant)]/60 focus:outline-none focus:ring-1 focus:ring-purple-400 transition-shadow min-h-[90px] resize-none"
               />
@@ -312,6 +331,40 @@ export default function AICoach() {
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+function BriefingPrompt({
+  label, hint, disabled, onGenerate,
+}: {
+  label: string;
+  hint: string;
+  disabled?: boolean;
+  onGenerate: () => void;
+}) {
+  const keySet = hasKey();
+  return (
+    <div className="text-center py-5 space-y-3">
+      <p className="text-xs text-[var(--color-on-surface-variant)] leading-relaxed max-w-xs mx-auto">{hint}</p>
+      {keySet ? (
+        <button
+          onClick={onGenerate}
+          disabled={disabled}
+          className="inline-flex items-center gap-2 bg-[var(--color-on-surface)] text-[var(--color-bg-base)] px-5 py-2.5 rounded-xl font-black text-xs disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer active:scale-95 transition-transform"
+        >
+          <Sparkles size={13} />
+          <span>{label}</span>
+        </button>
+      ) : (
+        <button
+          onClick={openAISettings}
+          className="inline-flex items-center gap-2 border border-[var(--color-outline)] bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] px-5 py-2.5 rounded-xl font-black text-xs cursor-pointer"
+        >
+          <Sparkles size={13} className="text-purple-400" />
+          <span>Add an OpenRouter key first</span>
+        </button>
       )}
     </div>
   );
