@@ -1,11 +1,31 @@
 # Nutrition
 
-A nutrition tracker with AI food analysis: photograph a plate or describe a meal
-and get macros, micronutrients, NOVA processing scores, coach briefings and
-smart day pre-fill. React + TypeScript + Vite, all data kept in the browser.
+A nutrition tracker that describes rather than grades. Photograph a plate or
+describe a meal and get macros, micronutrients and NOVA processing detail, plus
+a reflection on the day and a pause to use before eating. React + TypeScript +
+Vite, all data kept in the browser.
 
 Every AI call runs through [OpenRouter](https://openrouter.ai), so you pick the
 models yourself instead of being tied to one provider.
+
+## How it's meant to work
+
+The app deliberately has no score, no streak and no deficit carried between
+days. A reference number is a description of an intention, not a standard to
+pass, and a day that sits far from one is not a failure. Nothing is coloured
+like an alarm.
+
+The habit part is **the pause**: a beat between the impulse and the eating,
+offered before anything is logged. Name what is actually there — body hunger, a
+mood, habit, boredom — optionally sit with it for thirty seconds, then carry on
+and log, or notice that it passed. An urge that gets looked at often unties
+itself, and no rule was needed. Over time the interesting record is not the
+macros; it's which urges release when you simply see them.
+
+It also accepts **"ate it, didn't measure"**. A log that only takes precision
+teaches you to abandon it the moment you can't be precise.
+
+Turn the pause off in Reference → The pause if you would rather just track.
 
 ## Publish it on GitHub Pages
 
@@ -43,6 +63,18 @@ with a filter box (try `free`, `gemini`, `claude`, `qwen`):
 Requests that need JSON ask for strict structured output first. Models that do
 not support it are detected on the first failure and fall back to prompt-guided
 JSON with lenient parsing, so most of the catalogue works.
+
+## What's in it
+
+- **The pause** — offered before anything is logged, records whether the urge passed
+- **Photo logging** — downscaled to 1024 px, read by your vision model
+- **Description logging** — plain words in, an estimate out
+- **Manual entry**, and **"ate it, didn't measure"** for meals not worth counting
+- **Water** tracked per glass against a goal you set
+- **Reflection** on the day and across recent days, generated only when you ask
+- **Micronutrients and NOVA detail**, described rather than scored
+- **Backup and restore** the whole log as JSON
+- **Installable PWA** — the shell works offline
 
 ## Local development
 

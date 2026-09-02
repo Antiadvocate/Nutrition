@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useStore, FoodEntry } from '../store/StoreContext';
 import { Trash2, Heart, Edit2, Check, Scale, Clock, X, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from './ui/Toaster';
 
 export default function EntryList() {
   const { currentDayData } = useStore();
@@ -11,8 +12,8 @@ export default function EntryList() {
 
   return (
     <div className="px-4 py-6 pb-32 max-w-2xl mx-auto">
-      <h2 className="text-xs font-mono font-black uppercase tracking-widest text-[var(--color-on-surface-variant)] flex items-center gap-2 mb-4">
-        <span>Logged Dietary Items ({entries.length})</span>
+      <h2 className="text-xs font-mono font-medium tracking-wide text-[var(--color-on-surface-variant)] flex items-center gap-2 mb-4">
+        <span>What you ate ({entries.length})</span>
       </h2>
       <div className="space-y-3">
         <AnimatePresence initial={false}>
@@ -182,11 +183,19 @@ const getFoodTypeTheme = (entry: FoodEntry, index: number) => {
 };
 
 const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index }) => {
-  const { deleteEntry, toggleFavorite, updateEntry, state } = useStore();
+  const { deleteEntry, restoreEntry, toggleFavorite, updateEntry, state } = useStore();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [newWeight, setNewWeight] = useState(entry.baseQuantity.toString());
+  const [newWeight, setNewWeight] = useState(String(entry.baseQuantity ?? 1));
   const [newTime, setNewTime] = useState(entry.time || '');
+
+  // Keep the draft in step when the entry changes underneath us (an undo, an
+  // import, a repeat re-materialising) rather than showing a stale number.
+  useEffect(() => {
+    if (isEditing) return;
+    setNewWeight(String(entry.baseQuantity ?? 1));
+    setNewTime(entry.time || '');
+  }, [entry.baseQuantity, entry.time, isEditing]);
 
   const isFav = state.favorites.some(f => f.simpleName === entry.simpleName);
 
@@ -196,17 +205,38 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
     const updatedFields: Partial<FoodEntry> = {
       time: newTime,
     };
+    // Older entries and imported backups can be missing macrosPerUnit; derive it
+    // from the logged totals rather than throwing when someone edits a portion.
+    const base = entry.baseQuantity || 1;
+    const perUnit = entry.macrosPerUnit || {
+      calories: (entry.calories || 0) / base,
+      protein: (entry.protein || 0) / base,
+      carbs: (entry.carbs || 0) / base,
+      fats: (entry.fats || 0) / base,
+      fiber: (entry.fiber || 0) / base,
+    };
     if (!isNaN(weight) && weight > 0) {
       updatedFields.baseQuantity = weight;
       updatedFields.quantity = `${weight} ${entry.unit}`;
-      updatedFields.calories = entry.macrosPerUnit.calories * weight;
-      updatedFields.protein = entry.macrosPerUnit.protein * weight;
-      updatedFields.carbs = entry.macrosPerUnit.carbs * weight;
-      updatedFields.fats = entry.macrosPerUnit.fats * weight;
-      updatedFields.fiber = entry.macrosPerUnit.fiber * weight;
+      updatedFields.macrosPerUnit = perUnit;
+      updatedFields.calories = perUnit.calories * weight;
+      updatedFields.protein = perUnit.protein * weight;
+      updatedFields.carbs = perUnit.carbs * weight;
+      updatedFields.fats = perUnit.fats * weight;
+      updatedFields.fiber = perUnit.fiber * weight;
     }
     updateEntry(entry.id, updatedFields);
     setIsEditing(false);
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const removed = entry;
+    const position = index;
+    deleteEntry(entry.id);
+    toast(`Removed ${removed.simpleName}`, {
+      action: { label: 'Undo', onClick: () => restoreEntry(removed, position) },
+    });
   };
 
   const theme = getFoodTypeTheme(entry, index);
@@ -249,7 +279,7 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
           {/* Description container */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <h3 className="font-extrabold text-[var(--color-on-surface)] truncate text-sm sm:text-base tracking-tight leading-tight">
+              <h3 className="font-medium text-[var(--color-on-surface)] truncate text-sm sm:text-base tracking-tight leading-tight">
                 {entry.simpleName}
               </h3>
               
@@ -271,7 +301,7 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
               {entry.time && (
                 <>
                   <span className="opacity-30">•</span>
-                  <span className="font-mono text-[10px] font-black bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded border border-black/10 dark:border-white/10 text-[var(--color-on-surface)] leading-none">
+                  <span className="font-mono text-[10px] font-medium bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded border border-black/10 dark:border-white/10 text-[var(--color-on-surface)] leading-none">
                     {entry.time}
                   </span>
                 </>
@@ -292,8 +322,12 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
 
         {/* Right Side: Calories box + Chevron down */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          <span className="font-mono font-black text-xs sm:text-sm bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-lg shadow-3xs leading-none">
-            {Math.round(entry.calories)} kcal
+          <span className={`font-mono text-xs sm:text-sm px-2.5 py-1 rounded-lg leading-none border ${
+            entry.unmeasured
+              ? 'bg-transparent text-[var(--color-on-surface-variant)] border-dashed border-[var(--color-outline)]'
+              : 'bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] border-[var(--color-outline)]'
+          }`}>
+            {entry.unmeasured ? 'not counted' : `${Math.round(entry.calories)} kcal`}
           </span>
           <motion.div
             animate={{ rotate: isExpandedActive ? 180 : 0 }}
@@ -317,16 +351,16 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
             className="overflow-hidden"
           >
             {/* Structured Full-width Macro Nutrition Strip */}
-            <div className="mt-3.5 bg-black/5 dark:bg-black/30 border border-black/10 dark:border-white/5 px-3 py-2 rounded-xl flex justify-between items-center text-xs font-mono font-black text-[var(--color-on-surface-variant)] shadow-3xs">
-              <div className="flex items-center gap-1">P: <strong className="text-[var(--color-on-surface)] font-black">{Math.round(entry.protein)}g</strong></div>
+            <div className="mt-3.5 bg-black/5 dark:bg-black/30 border border-black/10 dark:border-white/5 px-3 py-2 rounded-xl flex justify-between items-center text-xs font-mono font-medium text-[var(--color-on-surface-variant)] shadow-3xs">
+              <div className="flex items-center gap-1">P: <strong className="text-[var(--color-on-surface)] font-medium">{Math.round(entry.protein)}g</strong></div>
               <div className="text-[var(--color-outline)]/30">•</div>
-              <div className="flex items-center gap-1">C: <strong className="text-[var(--color-on-surface)] font-black">{Math.round(entry.carbs)}g</strong></div>
+              <div className="flex items-center gap-1">C: <strong className="text-[var(--color-on-surface)] font-medium">{Math.round(entry.carbs)}g</strong></div>
               <div className="text-[var(--color-outline)]/30">•</div>
-              <div className="flex items-center gap-1">F: <strong className="text-[var(--color-on-surface)] font-black">{Math.round(entry.fats)}g</strong></div>
+              <div className="flex items-center gap-1">F: <strong className="text-[var(--color-on-surface)] font-medium">{Math.round(entry.fats)}g</strong></div>
               {entry.fiber !== undefined && entry.fiber > 0 && (
                 <>
                   <div className="text-[var(--color-outline)]/30">•</div>
-                  <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">Fib: <strong className="font-black">{Math.round(entry.fiber)}g</strong></div>
+                  <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">Fib: <strong className="font-medium">{Math.round(entry.fiber)}g</strong></div>
                 </>
               )}
             </div>
@@ -438,11 +472,11 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
                       e.stopPropagation();
                       setIsEditing(true);
                     }}
-                    className="text-[10px] font-mono font-black uppercase tracking-widest text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] bg-[var(--color-surface-variant)] hover:bg-[var(--color-surface-variant)]/80 px-2.5 py-1.5 rounded-lg border border-[var(--color-outline)]/40 hover:border-[var(--color-outline)] transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    title="Adjust serving quantity or log time"
+                    className="text-[10px] font-mono font-medium tracking-wide text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] bg-[var(--color-surface-variant)] hover:bg-[var(--color-surface-variant)]/80 px-2.5 py-1.5 rounded-lg border border-[var(--color-outline)]/40 hover:border-[var(--color-outline)] transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                    title="Adjust the portion or time"
                   >
                     <Edit2 size={10} className="stroke-[2.5px]" />
-                    <span>Adjust Details</span>
+                    <span>Adjust</span>
                   </button>
                 )}
               </div>
@@ -450,10 +484,7 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
               {/* Action Button: Delete Log */}
               {!isEditing && (
                 <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteEntry(entry.id);
-                  }}
+                  onClick={handleDelete}
                   className="w-8 h-8 rounded-lg bg-[var(--color-surface-variant)] hover:bg-rose-500/10 border border-[var(--color-outline)] hover:border-rose-500/25 text-[var(--color-on-surface-variant)] hover:text-rose-500 flex items-center justify-center transition-all flex-shrink-0 cursor-pointer"
                   title="Delete log"
                   aria-label="Delete entry"

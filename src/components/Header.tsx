@@ -47,7 +47,7 @@ export default function Header() {
         {format(now, 'h:mm a')}
       </div>
 
-      <div className="flex items-center gap-2.5 bg-[var(--color-surface-variant)] rounded-full px-3.5 py-1.5 text-[11px] font-mono font-extrabold text-[var(--color-on-surface)] border border-[var(--color-outline)] shadow-3xs">
+      <div className="flex items-center gap-2.5 bg-[var(--color-surface-variant)] rounded-full px-3.5 py-1.5 text-[11px] font-mono font-medium text-[var(--color-on-surface)] border border-[var(--color-outline)] shadow-3xs">
         <div className="flex flex-col items-center">
           <span className="text-[9px] text-blue-500 font-bold font-sans">KCAL</span>
           <span className="font-semibold">{Math.round(totals.calories)}</span>

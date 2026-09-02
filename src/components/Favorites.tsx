@@ -4,6 +4,7 @@ import { Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { generateId } from '../lib/utils';
 import { toast } from './ui/Toaster';
+import { openPause } from './PauseSheet';
 
 export default function Favorites() {
   const { state, addEntry, toggleFavorite } = useStore();
@@ -11,14 +12,18 @@ export default function Favorites() {
   if (state.favorites.length === 0) return null;
 
   const handleAdd = (fav: any) => {
-    addEntry({ ...fav, id: generateId(), time: format(new Date(), 'h:mm a') });
-    toast(`Added ${fav.simpleName}`);
+    const log = () => {
+      addEntry({ ...fav, id: generateId(), time: format(new Date(), 'h:mm a') });
+      toast(`Added ${fav.simpleName}`);
+    };
+    if (!state.pauseBeforeLogging) return log();
+    openPause(({ outcome }) => { if (outcome === 'ate') log(); });
   };
 
   return (
     <div className="px-4 py-4 max-w-2xl mx-auto">
-      <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)] flex items-center gap-2 mb-4">
-        <span>Favorite Quick-Logs</span>
+      <h2 className="text-[11px] font-medium tracking-wide text-[var(--color-on-surface-variant)] flex items-center gap-2 mb-4">
+        <span>Things you eat often</span>
       </h2>
       <div className="flex gap-4 overflow-x-auto pt-3.5 pb-4 px-2 -mx-2 scrollbar-hide">
         {state.favorites.map(fav => (

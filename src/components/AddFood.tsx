@@ -5,6 +5,9 @@ import { analyzeFood } from '../lib/ai';
 import { format } from 'date-fns';
 import { generateId, readImageDownscaled } from '../lib/utils';
 import { toast } from './ui/Toaster';
+import { hasKey } from '../lib/openrouter';
+import { openPause } from './PauseSheet';
+import { openAISettings } from './AISettings';
 
 export default function AddFood() {
   const [activeTab, setActiveTab] = useState('search');
@@ -26,6 +29,42 @@ export default function AddFood() {
   // AI State
   const [aiPrompt, setAiPrompt] = useState('');
 
+  /**
+   * The beat between the impulse and the eating. It never blocks: closing it or
+   * carrying on proceeds exactly as before. Only "it passed" stops the log,
+   * because in that case there is nothing to log.
+   */
+  const withPause = (proceed: () => void) => {
+    if (!state.pauseBeforeLogging) return proceed();
+    openPause(({ outcome }) => {
+      if (outcome === 'ate') proceed();
+    });
+  };
+
+  /** Records that a meal happened without claiming to know its numbers. */
+  const logUnmeasured = () => {
+    withPause(() => {
+      addEntry({
+        id: generateId(),
+        time: format(new Date(), 'h:mm a'),
+        description: 'Eaten, not measured',
+        simpleName: manualName.trim() || 'A meal',
+        emoji: '🍽️',
+        quantity: 'not measured',
+        baseQuantity: 1,
+        unit: 'serving',
+        calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0,
+        giIndex: 'Unknown',
+        satiety: 'Medium',
+        unmeasured: true,
+        macrosPerUnit: { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 },
+      });
+      setManualName('');
+      toast('Noted, without numbers');
+      setActiveTab('search');
+    });
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files: File[] = Array.from(e.target.files);
@@ -41,10 +80,19 @@ export default function AddFood() {
     e.target.value = '';
   };
 
-  const handleLog = async (isScan = false, isAi = false) => {
+  const handleLog = (isScan = false, isAi = false) => withPause(() => runLog(isScan, isAi));
+
+  const runLog = async (isScan = false, isAi = false) => {
     const textQuery = isScan ? (query || "Analyze the food in this image.") : (isAi ? aiPrompt : query);
     if (!textQuery && !isScan) return;
     if (isScan && images.length === 0) return;
+    // Fail before the request rather than after, and send them somewhere useful.
+    if (!hasKey()) {
+      toast('Add an OpenRouter key to use AI logging.', {
+        action: { label: 'Settings', onClick: openAISettings },
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -79,7 +127,10 @@ export default function AddFood() {
   const handleQuickAdd = (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualName || !manualCals) return;
+    withPause(() => runQuickAdd());
+  };
 
+  const runQuickAdd = () => {
     const cals = parseFloat(manualCals) || 0;
     const p = parseFloat(manualProtein) || 0;
     const c = parseFloat(manualCarbs) || 0;
@@ -130,8 +181,10 @@ export default function AddFood() {
   ).values()).slice(0, 20); // Last 20 unique foods
 
   const handleLibraryAdd = (food: any) => {
-    addEntry({ ...food, id: generateId(), time: format(new Date(), 'h:mm a') });
-    toast(`Added ${food.simpleName}`);
+    withPause(() => {
+      addEntry({ ...food, id: generateId(), time: format(new Date(), 'h:mm a') });
+      toast(`Added ${food.simpleName}`);
+    });
   };
 
   return (
@@ -139,17 +192,20 @@ export default function AddFood() {
       {/* Top Floating Tab Capsule Menu */}
       <div className="px-4 pt-6 pb-2 max-w-2xl mx-auto">
         <div className="flex items-center gap-1.5 p-1 bg-[var(--color-surface)] border border-[var(--color-outline)] rounded-2xl overflow-x-auto scrollbar-hide shadow-3xs">
-          <Tab icon={<Search size={14}/>} label="Search" active={activeTab === 'search'} onClick={() => setActiveTab('search')} />
-          <Tab icon={<Scan size={14}/>} label="Scan Camera" active={activeTab === 'scan'} onClick={() => setActiveTab('scan')} />
-          <Tab icon={<Sparkles size={14}/>} label="AI Log" active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
-          <Tab icon={<Zap size={14}/>} label="Quick Add" active={activeTab === 'quick_add'} onClick={() => setActiveTab('quick_add')} />
-          <Tab icon={<BookOpen size={14}/>} label="Library" active={activeTab === 'library'} onClick={() => setActiveTab('library')} />
+          <Tab icon={<Search size={14}/>} label="Quick Log" active={activeTab === 'search'} onClick={() => setActiveTab('search')} />
+          <Tab icon={<Scan size={14}/>} label="Photo" active={activeTab === 'scan'} onClick={() => setActiveTab('scan')} />
+          <Tab icon={<Sparkles size={14}/>} label="Describe" active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} />
+          <Tab icon={<Zap size={14}/>} label="Numbers" active={activeTab === 'quick_add'} onClick={() => setActiveTab('quick_add')} />
+          <Tab icon={<BookOpen size={14}/>} label="Again" active={activeTab === 'library'} onClick={() => setActiveTab('library')} />
         </div>
       </div>
 
       {/* Content based on tab */}
       {activeTab === 'search' && (
         <div className="px-4 py-4 max-w-2xl mx-auto">
+          <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium mb-3 leading-relaxed">
+            One line in, an estimate out. It is a model guessing, not a database — a portion makes the guess closer.
+          </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="flex-1 bg-[var(--color-surface)] rounded-2xl flex items-center px-4 shadow-3xs border border-[var(--color-outline)] focus-within:border-[var(--color-on-surface)] transition-colors">
               <Search size={18} className="text-[var(--color-on-surface-variant)]" />
@@ -158,16 +214,16 @@ export default function AddFood() {
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleLog(false, false)}
-                placeholder="Search food item (e.g., '1 poached egg')"
+                placeholder="Name a food and portion (e.g., '1 poached egg')"
                 className="w-full bg-transparent border-none outline-none px-3 py-3.5 text-[var(--color-on-surface)] placeholder-[var(--color-on-surface-variant)] text-xs font-bold"
               />
             </div>
             <button 
               onClick={() => handleLog(false, false)}
               disabled={loading || !query}
-              className="bg-[var(--color-on-surface)] text-[var(--color-bg-base)] px-6 py-3.5 rounded-2xl font-black text-xs shadow-xs disabled:opacity-50 flex items-center justify-center min-w-[130px] transition-transform active:scale-95 cursor-pointer"
+              className="bg-[var(--color-on-surface)] text-[var(--color-bg-base)] px-6 py-3.5 rounded-2xl font-medium text-xs shadow-xs disabled:opacity-50 flex items-center justify-center min-w-[130px] transition-transform active:scale-95 cursor-pointer"
             >
-              {loading ? <Loader2 size={16} className="animate-spin text-purple-400" /> : 'Log Foods'}
+              {loading ? <Loader2 size={16} className="animate-spin text-purple-400" /> : 'Log it'}
             </button>
           </div>
         </div>
@@ -176,8 +232,8 @@ export default function AddFood() {
       {activeTab === 'scan' && (
         <div className="px-4 py-4 max-w-2xl mx-auto">
           <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] shadow-xs space-y-4">
-            <h3 className="font-black text-lg text-[var(--color-on-surface)] font-display tracking-tight">Computer Vision Cam</h3>
-            <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium leading-relaxed">Upload a plate snapshot. The AI parses the portions and calculates macros instantly.</p>
+            <h3 className="font-medium text-lg text-[var(--color-on-surface)] font-display tracking-tight">Photograph the plate</h3>
+            <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium leading-relaxed">A photo of what is in front of you. The model reads the portions and estimates from there.</p>
             
             {images.length > 0 && (
               <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
@@ -203,7 +259,7 @@ export default function AddFood() {
                 className="flex-1 flex items-center justify-center gap-2 bg-[var(--color-surface-variant)] border border-[var(--color-outline)] hover:bg-[var(--color-outline)] text-[var(--color-on-surface)] py-3 hover:scale-[1.01] active:scale-95 rounded-xl font-bold text-xs transition-all cursor-pointer"
               >
                 <Camera size={16} className="text-blue-500" />
-                <span>{images.length > 0 ? 'Inject More Photos' : 'Camera Snapshot / Upload'}</span>
+                <span>{images.length > 0 ? 'Add another photo' : 'Take or choose a photo'}</span>
               </button>
               <input
                 type="file"
@@ -219,17 +275,17 @@ export default function AddFood() {
               type="text"
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="Context note: 'sautéed in grass-fed butter'"
+              placeholder="Anything the photo does not show"
               className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl px-4 py-3 outline-none focus:ring-1 focus:ring-[var(--color-on-surface)] transition-all text-xs font-medium"
             />
 
             <button 
               onClick={() => handleLog(true, false)}
               disabled={loading || images.length === 0}
-              className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-black text-xs transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-medium text-xs transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? <Loader2 size={16} className="animate-spin text-purple-400" /> : <Sparkles size={15} className="text-blue-400" />}
-              <span>Initiate Vision Extraction</span>
+              <span>Read the plate</span>
             </button>
           </div>
         </div>
@@ -238,15 +294,18 @@ export default function AddFood() {
       {activeTab === 'ai' && (
         <div className="px-4 py-4 max-w-2xl mx-auto">
           <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] shadow-xs space-y-4">
-            <h3 className="font-black text-lg text-[var(--color-on-surface)] font-display tracking-tight flex items-center gap-2">
+            <h3 className="font-medium text-lg text-[var(--color-on-surface)] font-display tracking-tight flex items-center gap-2">
               <Sparkles size={18} className="text-purple-400 animate-pulse" />
-              <span>Surgical AI Analyzer</span>
+              <span>Describe it</span>
             </h3>
-            <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium leading-relaxed">Type what you had in conversational terms. Our pipeline computes precise, ingredient-level targets.</p>
+            <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium leading-relaxed">Say what you had in ordinary words. Portions help, but a rough description is fine.</p>
             
             <textarea 
               value={aiPrompt}
               onChange={e => setAiPrompt(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleLog(false, true);
+              }}
               placeholder="e.g. 'Stir-fried tofu, 150g jasmine rice and 2 tbsp peanut dressing after training...'"
               className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl p-4 outline-none focus:ring-1 focus:ring-[var(--color-on-surface)] transition-all min-h-[110px] resize-none text-xs font-medium leading-relaxed"
             />
@@ -254,10 +313,10 @@ export default function AddFood() {
             <button 
               onClick={() => handleLog(false, true)}
               disabled={loading || !aiPrompt}
-              className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-black text-xs transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-medium text-xs transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
             >
               {loading ? <Loader2 size={16} className="animate-spin text-purple-400" /> : <Sparkles size={15} className="text-blue-400" />}
-              <span>Execute Semantic Parsing</span>
+              <span>Work it out</span>
             </button>
           </div>
         </div>
@@ -266,8 +325,8 @@ export default function AddFood() {
       {activeTab === 'quick_add' && (
         <div className="px-4 py-4 max-w-2xl mx-auto">
           <form onSubmit={handleQuickAdd} className="space-y-4 bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] shadow-xs">
-            <h3 className="font-black text-lg text-[var(--color-on-surface)] font-display tracking-tight">Direct Manual Logging</h3>
-            <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium">Instantly log known figures skipping any machine inference.</p>
+            <h3 className="font-medium text-lg text-[var(--color-on-surface)] font-display tracking-tight">Type it in</h3>
+            <p className="text-[11px] text-[var(--color-on-surface-variant)] font-medium">Numbers you already know, straight in. No model involved.</p>
             
             <input 
               type="text" 
@@ -279,25 +338,39 @@ export default function AddFood() {
             />
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-on-surface-variant)]">Calories (kcal)</label>
+                <label className="text-[9px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">Calories (kcal)</label>
                 <input type="number" placeholder="240" value={manualCals} onChange={e => setManualCals(e.target.value)} className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl px-4 py-3 outline-none text-xs font-bold" required />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-on-surface-variant)]">Protein (g)</label>
+                <label className="text-[9px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">Protein (g)</label>
                 <input type="number" placeholder="25" value={manualProtein} onChange={e => setManualProtein(e.target.value)} className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl px-4 py-3 outline-none text-xs font-bold" />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-on-surface-variant)]">Carbohydrates (g)</label>
+                <label className="text-[9px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">Carbohydrates (g)</label>
                 <input type="number" placeholder="5" value={manualCarbs} onChange={e => setManualCarbs(e.target.value)} className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl px-4 py-3 outline-none text-xs font-bold" />
               </div>
               <div className="space-y-1">
-                <label className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--color-on-surface-variant)]">Lipids/Fats (g)</label>
+                <label className="text-[9px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">Lipids/Fats (g)</label>
                 <input type="number" placeholder="2" value={manualFats} onChange={e => setManualFats(e.target.value)} className="w-full bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] rounded-xl px-4 py-3 outline-none text-xs font-bold" />
               </div>
             </div>
-            <button type="submit" className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-black text-xs mt-4 transition-all active:scale-95 cursor-pointer">
-              Log Raw Metrics
+            <button type="submit" className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-2xl font-medium text-xs mt-4 transition-opacity hover:opacity-90 cursor-pointer">
+              Log it
             </button>
+
+            <div className="pt-3 mt-1 border-t border-[var(--color-outline)] space-y-2">
+              <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed">
+                Or don't measure it. Some meals are not worth counting, and a log that only accepts precision teaches
+                you to abandon it the moment you can't be precise.
+              </p>
+              <button
+                type="button"
+                onClick={logUnmeasured}
+                className="w-full border border-[var(--color-outline)] text-[var(--color-on-surface)] py-3 rounded-2xl font-medium text-xs hover:bg-[var(--color-surface-variant)] transition-colors cursor-pointer"
+              >
+                Ate it, didn't measure
+              </button>
+            </div>
           </form>
         </div>
       )}
@@ -305,13 +378,13 @@ export default function AddFood() {
       {activeTab === 'library' && (
         <div className="px-4 py-4 max-w-2xl mx-auto pb-32">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-black text-base text-[var(--color-on-surface)] font-display tracking-tight">Logged Items Index</h3>
+            <h3 className="font-medium text-base text-[var(--color-on-surface)] font-display tracking-tight">Things you have logged before</h3>
             <span className="text-[10px] font-mono bg-[var(--color-surface-variant)] border border-[var(--color-outline)] px-2.5 py-1 rounded-full text-[var(--color-on-surface-variant)] font-bold">
-              {libraryFoods.length} Items Preserved
+              {libraryFoods.length} items
             </span>
           </div>
           {libraryFoods.length === 0 ? (
-            <p className="text-xs text-[var(--color-on-surface-variant)] font-medium bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-outline)] text-center">Your historic library will build automatically as you log meals.</p>
+            <p className="text-xs text-[var(--color-on-surface-variant)] font-medium bg-[var(--color-surface)] p-6 rounded-2xl border border-[var(--color-outline)] text-center">This fills in on its own as you log.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {libraryFoods.map((food, idx) => (
@@ -321,7 +394,7 @@ export default function AddFood() {
                       {food.emoji || '🍽️'}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-extrabold text-xs text-[var(--color-on-surface)] truncate">{food.simpleName}</p>
+                      <p className="font-medium text-xs text-[var(--color-on-surface)] truncate">{food.simpleName}</p>
                       <p className="text-[10px] font-mono text-[var(--color-on-surface-variant)] mt-0.5">{Math.round(food.calories)} kcal • {food.quantity}</p>
                     </div>
                   </div>
@@ -346,7 +419,7 @@ function Tab({ icon, label, active, onClick }: any) {
   return (
     <button 
       onClick={onClick}
-      className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all cursor-pointer flex-1 min-w-max ${active ? 'bg-[var(--color-on-surface)] text-[var(--color-bg-base)] shadow-2xs scale-105' : 'text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]'}`}
+      className={`flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold tracking-wide transition-all cursor-pointer flex-1 min-w-max ${active ? 'bg-[var(--color-on-surface)] text-[var(--color-bg-base)] shadow-2xs scale-105' : 'text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)]'}`}
     >
       {icon}
       <span>{label}</span>

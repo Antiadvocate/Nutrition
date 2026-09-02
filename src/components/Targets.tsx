@@ -9,6 +9,7 @@ import {
   Zap
 } from 'lucide-react';
 import { toast } from './ui/Toaster';
+import DataPanel from './DataPanel';
 
 const DAYS = [
   { label: 'Sun', index: 0 },
@@ -47,11 +48,11 @@ export default function Targets() {
     <div className="px-4 py-6 pb-32 space-y-6 max-w-3xl mx-auto">
       {/* Header section */}
       <div className="space-y-1">
-        <h1 className="text-3xl font-black text-[var(--color-on-surface)] tracking-tight flex items-center gap-2">
+        <h1 className="text-3xl font-light text-[var(--color-on-surface)] tracking-tight flex items-center gap-2">
           <Target size={28} className="text-rose-500" />
-          <span>Nutrient Targets</span>
+          <span>Reference points</span>
         </h1>
-        <p className="text-xs text-[var(--color-on-surface-variant)]">Define custom caloric partitions, macro ratios, & daily schedule templates.</p>
+        <p className="text-xs text-[var(--color-on-surface-variant)]">Numbers to measure against, not standards to meet. Set them once and let them sit in the background.</p>
       </div>
 
       <div className="space-y-6">
@@ -66,7 +67,7 @@ export default function Targets() {
                     type="text"
                     value={profile.name}
                     onChange={e => handleNameChange(profile.id, e.target.value)}
-                    className="bg-transparent text-lg font-black text-[var(--color-on-surface)] outline-hidden w-full border-b border-transparent focus:border-[var(--color-outline)] transition-colors py-1"
+                    className="bg-transparent text-lg font-medium text-[var(--color-on-surface)] outline-hidden w-full border-b border-transparent focus:border-[var(--color-outline)] transition-colors py-1"
                     placeholder="Profile Name (e.g. Training Day)"
                   />
                 </div>
@@ -86,7 +87,7 @@ export default function Targets() {
 
               {/* Day Assignment */}
               <div className="space-y-2.5">
-                <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider flex items-center gap-1">
+                <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] tracking-wide flex items-center gap-1">
                   <Zap size={11} className="text-amber-500" />
                   <span>Assigned Calendar Days</span>
                 </span>
@@ -114,7 +115,7 @@ export default function Targets() {
               {/* Macros */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-3 pt-4 border-t border-[var(--color-outline)]">
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Calories</span>
+                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] tracking-wide">Calories</span>
                   <input
                     type="number"
                     value={profile.macros.calories}
@@ -123,7 +124,7 @@ export default function Targets() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Protein (g)</span>
+                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] tracking-wide">Protein (g)</span>
                   <input
                     type="number"
                     value={profile.macros.protein}
@@ -132,7 +133,7 @@ export default function Targets() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Carbs (g)</span>
+                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] tracking-wide">Carbs (g)</span>
                   <input
                     type="number"
                     value={profile.macros.carbs}
@@ -141,7 +142,7 @@ export default function Targets() {
                   />
                 </div>
                 <div className="flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Fats (g)</span>
+                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] tracking-wide">Fats (g)</span>
                   <input
                     type="number"
                     value={profile.macros.fats}
@@ -150,7 +151,7 @@ export default function Targets() {
                   />
                 </div>
                 <div className="flex flex-col gap-1 col-span-2 md:col-span-1">
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Fiber (g)</span>
+                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] tracking-wide">Fiber (g)</span>
                   <input
                     type="number"
                     value={profile.macros.fiber ?? 30}
@@ -165,15 +166,21 @@ export default function Targets() {
           <button
             onClick={() => {
               addProfile();
-              toast('New profile added');
+              toast('Added');
             }}
             className="w-full flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] text-[var(--color-on-surface)] py-3 rounded-2xl font-bold text-xs transition-transform active:scale-95 border border-dashed border-[var(--color-outline)] cursor-pointer"
           >
             <Plus size={14} />
-            <span>Add New Profile</span>
+            <span>Add another set</span>
           </button>
         </div>
       </div>
+
+      <div className="space-y-1 pt-2">
+        <h2 className="text-lg font-medium text-[var(--color-on-surface)] tracking-tight">Data</h2>
+        <p className="text-xs text-[var(--color-on-surface-variant)]">Hydration goal, and getting your log in and out.</p>
+      </div>
+      <DataPanel />
     </div>
   );
 }

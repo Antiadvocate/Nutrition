@@ -26,17 +26,23 @@ import {
   Lightbulb,
   XCircle,
   TrendingUp,
-  Settings2
+  Settings2,
+  Moon,
+  Sun,
+  Plus
 } from 'lucide-react';
 import { autoCompleteDayMeals } from '../lib/ai';
 import { generateId } from '../lib/utils';
 import { toast } from './ui/Toaster';
 import { openAISettings } from './AISettings';
+import { hasKey } from '../lib/openrouter';
+import WaterCard from './WaterCard';
+import PausePanel from './PausePanel';
 
 type TimeWindow = '1W' | '1M' | '3M' | '6M' | 'Custom';
 
 export default function Dashboard() {
-  const { currentDayData, state, currentDate, setCurrentDate, addEntry } = useStore();
+  const { currentDayData, state, currentDate, setCurrentDate, addEntry, toggleTheme } = useStore();
   const profileId = state.dayProfiles?.[currentDate.getDay()];
   const targets = state.profiles?.find(p => p.id === profileId)?.macros || { calories: 2000, protein: 150, carbs: 200, fats: 65, fiber: 30 };
   
@@ -86,6 +92,12 @@ export default function Dashboard() {
   };
 
   const handleSmartComplete = async (isHealthy: boolean) => {
+    if (!hasKey()) {
+      toast('Add an OpenRouter key to use smart pre-fill.', {
+        action: { label: 'Settings', onClick: openAISettings },
+      });
+      return;
+    }
     if (remaining.calories < 50 && remaining.protein < 5 && remaining.carbs < 5 && remaining.fats < 5) {
       toast("You've already hit your targets today!");
       return;
@@ -209,7 +221,7 @@ export default function Dashboard() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1">
           <div className="relative inline-block">
-            <p className="text-[11px] font-mono font-bold text-[var(--color-on-surface-variant)] uppercase tracking-widest cursor-pointer hover:text-[var(--color-on-surface)] transition-all flex items-center gap-1.5 bg-[var(--color-surface-variant)] px-3 py-1.5 rounded-full border border-[var(--color-outline)] shadow-3xs hover:scale-[1.02] active:scale-95">
+            <p className="text-[11px] font-mono font-medium text-[var(--color-on-surface-variant)] tracking-wide cursor-pointer hover:text-[var(--color-on-surface)] transition-all flex items-center gap-1.5 bg-[var(--color-surface-variant)] px-3 py-1.5 rounded-full border border-[var(--color-outline)] shadow-3xs hover:scale-[1.02] active:scale-95">
               <CalendarIcon size={12} className="text-blue-500" />
               <span>{format(currentDate, 'EEEE, MMMM d')}</span>
               <ChevronDown size={12} className="opacity-60" />
@@ -226,26 +238,52 @@ export default function Dashboard() {
               }}
             />
           </div>
-          <h1 className="text-4xl font-black text-[var(--color-on-surface)] tracking-tight font-display mt-1.5">
-            Biometric Log
+          <h1 className="text-4xl font-light text-[var(--color-on-surface)] tracking-tight font-display mt-1.5">
+            Today
           </h1>
         </div>
 
-        <button
-          onClick={openAISettings}
-          className="self-start md:self-auto flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] transition-all active:scale-95 cursor-pointer shadow-3xs"
-          title="AI engine & models"
-        >
-          <Settings2 size={13} className="text-purple-400" />
-          <span>AI Engine</span>
-        </button>
+        <div className="flex items-center gap-2 self-start md:self-auto">
+          <button
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] flex items-center justify-center transition-all active:scale-90 cursor-pointer shadow-3xs"
+            aria-label="Toggle theme"
+            title="Toggle theme"
+          >
+            {state.theme === 'dark'
+              ? <Sun size={15} className="text-amber-400" />
+              : <Moon size={15} className="text-zinc-600" />}
+          </button>
+          <button
+            onClick={openAISettings}
+            className="flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] px-3.5 py-2 rounded-full text-[10px] font-medium tracking-wide text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] transition-all active:scale-95 cursor-pointer shadow-3xs"
+            title="AI engine & models"
+          >
+            <Settings2 size={13} className="text-purple-400" />
+            <span>AI Engine</span>
+          </button>
+        </div>
       </div>
+
+      {entries.length === 0 && (
+        <div className="bg-[var(--color-surface)] border border-dashed border-[var(--color-outline)] rounded-3xl p-5 flex items-center gap-3.5">
+          <div className="w-10 h-10 rounded-2xl bg-[var(--color-on-surface)] text-[var(--color-bg-base)] flex items-center justify-center flex-shrink-0">
+            <Plus size={18} strokeWidth={3} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-[var(--color-on-surface)]">Nothing here yet, which is fine</p>
+            <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed mt-0.5">
+              Tap + to photograph a plate, describe a meal, or note that you ate without measuring it.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Focus: Daily Goals & Rings */}
       <div className="space-y-6">
-        <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)] flex items-center gap-2">
-          <Activity size={14} className="text-blue-500" />
-          <span>DAILY COMPLIANCE SCORE</span>
+        <h2 className="text-[11px] font-medium tracking-wide text-[var(--color-on-surface-variant)] flex items-center gap-2">
+          <Activity size={13} className="opacity-50" />
+          <span>What the day holds so far</span>
         </h2>
         
         {/* Core Calorie Pod with Ring */}
@@ -274,18 +312,15 @@ export default function Dashboard() {
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
-                className="text-[var(--color-accent-kcal)] glow-kcal transition-all duration-1000 ease-out"
+                className="text-[var(--color-accent-kcal)] transition-all duration-1000 ease-out"
               />
             </svg>
             <div className="absolute flex flex-col items-center justify-center text-center">
-              <span className="text-2xl font-black text-[var(--color-on-surface)] font-display tracking-tight leading-none">
+              <span className="text-3xl font-light text-[var(--color-on-surface)] font-display tracking-tight leading-none">
                 {Math.round(totals.calories)}
               </span>
-              <span className="text-[9px] text-[var(--color-on-surface-variant)] font-bold uppercase tracking-wider mt-1">
-                KCAL ACTIVE
-              </span>
-              <span className="text-[10px] font-mono mt-0.5 px-1.5 py-0.5 rounded-md bg-[var(--color-surface-variant)] text-blue-500 font-extrabold shadow-3xs">
-                {Math.round(caloriePercent)}%
+              <span className="text-[10px] text-[var(--color-on-surface-variant)] font-medium tracking-wide mt-1.5">
+                kcal eaten
               </span>
             </div>
           </div>
@@ -293,15 +328,15 @@ export default function Dashboard() {
           {/* Caloric Metrics Side-by-Side */}
           <div className="grid grid-cols-2 gap-x-12 gap-y-6 w-full md:w-auto">
             <div className="text-left">
-              <p className="text-[10px] font-mono font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Remaining</p>
-              <p className="text-3xl font-black text-[var(--color-on-surface)] font-display tracking-tight mt-1">
+              <p className="text-[11px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Left</p>
+              <p className="text-3xl font-light text-[var(--color-on-surface)] font-display tracking-tight mt-1">
                 {Math.round(remaining.calories)}
                 <span className="text-xs font-normal text-[var(--color-on-surface-variant)] font-sans ml-1">kcal</span>
               </p>
             </div>
             <div className="text-left">
-              <p className="text-[10px] font-mono font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Daily Target</p>
-              <p className="text-3xl font-black text-[var(--color-on-surface)] font-display tracking-tight mt-1">
+              <p className="text-[11px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Reference</p>
+              <p className="text-3xl font-light text-[var(--color-on-surface)] font-display tracking-tight mt-1">
                 {Math.round(targets.calories)}
                 <span className="text-xs font-normal text-[var(--color-on-surface-variant)] font-sans ml-1">kcal</span>
               </p>
@@ -316,19 +351,19 @@ export default function Dashboard() {
           <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-outline)] shadow-3xs flex flex-col justify-between h-32 relative overflow-hidden">
             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-12 h-12 bg-red-500/5 rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Protein</span>
-              <span className="text-[10px] font-mono font-extrabold text-red-500">
+              <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Protein</span>
+              <span className="text-[10px] font-mono text-[var(--color-on-surface-variant)]">
                 {Math.round(getPercent(totals.protein, targets.protein))}%
               </span>
             </div>
             <div>
               <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden mb-2.5">
                 <div 
-                  className="h-full bg-[var(--color-accent-protein)] glow-protein rounded-full transition-all duration-500"
+                  className="h-full bg-[var(--color-accent-protein)] rounded-full transition-all duration-500"
                   style={{ width: `${getPercent(totals.protein, targets.protein)}%` }}
                 />
               </div>
-              <p className="text-sm font-black text-[var(--color-on-surface)] font-display tracking-tight">
+              <p className="text-sm font-medium text-[var(--color-on-surface)] font-display tracking-tight">
                 {Math.round(displayData.protein)}
                 <span className="text-xs font-medium text-[var(--color-on-surface-variant)] font-sans ml-1">
                   {viewMode === 'consumed' ? `/ ${Math.round(targets.protein)}g` : 'left of'}
@@ -341,19 +376,19 @@ export default function Dashboard() {
           <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-outline)] shadow-3xs flex flex-col justify-between h-32 relative overflow-hidden">
             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-12 h-12 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Fats</span>
-              <span className="text-[10px] font-mono font-extrabold text-amber-500">
+              <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Fats</span>
+              <span className="text-[10px] font-mono text-[var(--color-on-surface-variant)]">
                 {Math.round(getPercent(totals.fats, targets.fats))}%
               </span>
             </div>
             <div>
               <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden mb-2.5">
                 <div 
-                  className="h-full bg-[var(--color-accent-fats)] glow-fats rounded-full transition-all duration-500"
+                  className="h-full bg-[var(--color-accent-fats)] rounded-full transition-all duration-500"
                   style={{ width: `${getPercent(totals.fats, targets.fats)}%` }}
                 />
               </div>
-              <p className="text-sm font-black text-[var(--color-on-surface)] font-display tracking-tight">
+              <p className="text-sm font-medium text-[var(--color-on-surface)] font-display tracking-tight">
                 {Math.round(displayData.fats)}
                 <span className="text-xs font-medium text-[var(--color-on-surface-variant)] font-sans ml-1">
                   {viewMode === 'consumed' ? `/ ${Math.round(targets.fats)}g` : 'left of'}
@@ -366,19 +401,19 @@ export default function Dashboard() {
           <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-outline)] shadow-3xs flex flex-col justify-between h-32 relative overflow-hidden">
             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-12 h-12 bg-emerald-500/5 rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Carbs</span>
-              <span className="text-[10px] font-mono font-extrabold text-emerald-500">
+              <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Carbs</span>
+              <span className="text-[10px] font-mono text-[var(--color-on-surface-variant)]">
                 {Math.round(getPercent(totals.carbs, targets.carbs))}%
               </span>
             </div>
             <div>
               <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden mb-2.5">
                 <div 
-                  className="h-full bg-[var(--color-accent-carbs)] glow-carbs rounded-full transition-all duration-500"
+                  className="h-full bg-[var(--color-accent-carbs)] rounded-full transition-all duration-500"
                   style={{ width: `${getPercent(totals.carbs, targets.carbs)}%` }}
                 />
               </div>
-              <p className="text-sm font-black text-[var(--color-on-surface)] font-display tracking-tight">
+              <p className="text-sm font-medium text-[var(--color-on-surface)] font-display tracking-tight">
                 {Math.round(displayData.carbs)}
                 <span className="text-xs font-medium text-[var(--color-on-surface-variant)] font-sans ml-1">
                   {viewMode === 'consumed' ? `/ ${Math.round(targets.carbs)}g` : 'left of'}
@@ -391,19 +426,19 @@ export default function Dashboard() {
           <div className="bg-[var(--color-surface)] p-4 rounded-2xl border border-[var(--color-outline)] shadow-3xs flex flex-col justify-between h-32 relative overflow-hidden">
             <div className="absolute top-0 right-0 -mr-4 -mt-4 w-12 h-12 bg-cyan-500/5 rounded-full blur-xl pointer-events-none" />
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Diet Fiber</span>
-              <span className="text-[10px] font-mono font-extrabold text-cyan-500">
+              <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Fiber</span>
+              <span className="text-[10px] font-mono text-[var(--color-on-surface-variant)]">
                 {Math.round(getPercent(totals.fiber, targets.fiber))}%
               </span>
             </div>
             <div>
               <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden mb-2.5">
                 <div 
-                  className="h-full bg-cyan-500 glow-fiber rounded-full transition-all duration-500"
+                  className="h-full bg-cyan-500 rounded-full transition-all duration-500"
                   style={{ width: `${getPercent(totals.fiber, targets.fiber)}%` }}
                 />
               </div>
-              <p className="text-sm font-black text-[var(--color-on-surface)] font-display tracking-tight">
+              <p className="text-sm font-medium text-[var(--color-on-surface)] font-display tracking-tight">
                 {Math.round(viewMode === 'consumed' ? totals.fiber : remaining.fiber)}
                 <span className="text-xs font-medium text-[var(--color-on-surface-variant)] font-sans ml-1">
                   {viewMode === 'consumed' ? `/ ${Math.round(targets.fiber)}g` : 'left of'}
@@ -413,6 +448,10 @@ export default function Dashboard() {
           </div>
 
         </div>
+
+        <WaterCard />
+
+        <PausePanel />
 
         {/* View Toggle Mode Selector & Auto-fill actions */}
         <div className="flex flex-col items-center gap-3 mt-6">
@@ -479,7 +518,7 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)] flex items-center gap-2">
+        <h2 className="text-xs font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)] flex items-center gap-2">
           <TrendingUp size={14} className="text-blue-500" />
           <span>WEEKLY TREND ASSESSMENT</span>
         </h2>
@@ -487,14 +526,14 @@ export default function Dashboard() {
         <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] shadow-sm">
           <div className="flex justify-between items-end mb-6">
             <div>
-              <p className="text-[10px] font-mono font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Historical Average</p>
-              <p className="text-3xl font-black text-[var(--color-on-surface)] font-display tracking-tight mt-1">
+              <p className="text-[11px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Average over this window</p>
+              <p className="text-3xl font-light text-[var(--color-on-surface)] font-display tracking-tight mt-1">
                 {avgConsumed} <span className="text-xs font-normal text-[var(--color-on-surface-variant)] font-sans">kcal / day</span>
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] font-mono font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Delta vs. Baseline</p>
-              <p className={`text-3xl font-black font-display tracking-tight mt-1 ${avgDiff > 0 ? 'text-[var(--color-accent-protein)]' : 'text-[var(--color-accent-carbs)]'}`}>
+              <p className="text-[11px] font-medium text-[var(--color-on-surface-variant)] tracking-wide">Today against the reference</p>
+              <p className="text-3xl font-light font-display tracking-tight mt-1 text-[var(--color-on-surface)]">
                 {avgDiff > 0 ? '+' : ''}{avgDiff} <span className="text-xs font-normal text-[var(--color-on-surface-variant)] font-sans">kcal</span>
               </p>
             </div>
@@ -550,11 +589,11 @@ export default function Dashboard() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-kcal)]"></div>
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider font-mono">Consumed</span>
+                  <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] tracking-wide font-mono">Eaten</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-2.5 h-2.5 rounded-full bg-[var(--color-accent-protein)]"></div>
-                  <span className="text-[10px] font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider font-mono">Target Limit</span>
+                  <span className="text-[10px] font-medium text-[var(--color-on-surface-variant)] tracking-wide font-mono">Reference</span>
                 </div>
               </div>
             </div>
