@@ -49,7 +49,7 @@ export function Toaster() {
             {m.action && (
               <button
                 onClick={() => { m.action!.onClick(); dismiss(m.id); }}
-                className="flex-shrink-0 uppercase tracking-wider text-[10px] font-black bg-white/15 hover:bg-white/25 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
+                className="flex-shrink-0 tracking-wide text-[10px] font-medium bg-white/15 hover:bg-white/25 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer"
               >
                 {m.action.label}
               </button>

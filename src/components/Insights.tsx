@@ -110,7 +110,7 @@ export default function Insights() {
 
   // Guidelines levels
   const microTargets = {
-    sodium: { label: 'Sodium', limit: 2300, unit: 'mg', color: 'text-amber-500', isMax: true, desc: 'Limit intake to prevent circulatory & blood pressure strain' },
+    sodium: { label: 'Sodium', limit: 2300, unit: 'mg', color: 'text-amber-500', isMax: true, desc: 'Commonly kept below this' },
     potassium: { label: 'Potassium', limit: 3500, unit: 'mg', color: 'text-emerald-500', isMax: false, desc: 'Key electrolyte supporting cellular pump & muscle function' },
     calcium: { label: 'Calcium', limit: 1000, unit: 'mg', color: 'text-blue-500', isMax: false, desc: 'Essential for skeletal integrity, bone density & neural signaling' },
     iron: { label: 'Iron', limit: 18, unit: 'mg', color: 'text-rose-500', isMax: false, desc: 'Transports oxygen via hemoglobin & vital for mitochondria' },
@@ -118,16 +118,20 @@ export default function Insights() {
     vitaminD: { label: 'Vitamin D', limit: 15, unit: 'mcg', color: 'text-cyan-500', isMax: false, desc: 'Critical for immunological resilience & calcium absorption' },
   };
 
+  // Where a number sits relative to a reference, said plainly. No alarms: a
+  // reference point is a description of an intention, not a standard to pass.
+  const neutral = 'text-[var(--color-on-surface-variant)] bg-[var(--color-surface-variant)]';
+  const marked = 'text-[var(--color-on-surface)] bg-[var(--color-surface-variant)]';
+
   const getMicroStatus = (value: number, target: number, isMax: boolean) => {
     if (isMax) {
-      if (value > target) return { label: 'Excessive', style: 'text-red-500 bg-red-500/10' };
-      if (value > target * 0.8) return { label: 'Warning', style: 'text-amber-500 bg-amber-500/10' };
-      return { label: 'Safe', style: 'text-green-500 bg-green-500/10' };
-    } else {
-      if (value >= target) return { label: 'Optimal', style: 'text-green-500 bg-green-500/10' };
-      if (value >= target * 0.5) return { label: 'Moderate', style: 'text-amber-500 bg-amber-500/10' };
-      return { label: 'Deficient', style: 'text-red-400 bg-red-400/10' };
+      if (value > target) return { label: 'above reference', style: marked };
+      if (value > target * 0.8) return { label: 'near reference', style: neutral };
+      return { label: 'under reference', style: neutral };
     }
+    if (value >= target) return { label: 'at reference', style: marked };
+    if (value >= target * 0.5) return { label: 'part way', style: neutral };
+    return { label: 'well under', style: neutral };
   };
 
   const currentEntries = view === 'daily' ? dailyEntries : weeklyData.allEntries;
@@ -148,9 +152,9 @@ export default function Insights() {
   }, [currentDate, state.dayProfiles, state.profiles]);
 
   const getFiberStatus = (value: number, target: number) => {
-    if (value >= target) return { label: 'Optimal', style: 'text-emerald-500 bg-emerald-500/10' };
-    if (value >= target * 0.6) return { label: 'Moderate', style: 'text-amber-500 bg-amber-500/10' };
-    return { label: 'Deficient', style: 'text-red-400 bg-red-400/10' };
+    if (value >= target) return { label: 'at reference', style: marked };
+    if (value >= target * 0.6) return { label: 'part way', style: neutral };
+    return { label: 'well under', style: neutral };
   };
 
   const currentIngredients = useMemo(() => {
@@ -193,7 +197,7 @@ export default function Insights() {
         });
       }
       if (e.processingScore && e.processingScore === 4) {
-        const upfWarning = `${e.simpleName} is ultra-processed. Contains industrial additives & synthetic compounds.`;
+        const upfWarning = `${e.simpleName} is ultra-processed on the NOVA scale.`;
         if (!list.includes(upfWarning)) list.push(upfWarning);
       }
     });
@@ -222,10 +226,10 @@ export default function Insights() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-4xl font-black tracking-tight flex items-center gap-2">
-            Insights <Sparkles size={28} className="text-[var(--color-accent-kcal)] animate-pulse" />
+          <h1 className="text-4xl font-light tracking-tight flex items-center gap-2">
+            Detail <Sparkles size={26} className="text-[var(--color-on-surface-variant)] opacity-40" />
           </h1>
-          <p className="text-sm text-[var(--color-on-surface-variant)] font-medium">Deep micronutrient levels & ultra-processed audits</p>
+          <p className="text-sm text-[var(--color-on-surface-variant)]">Micronutrients and how processed the food was. Information, not a report card.</p>
         </div>
       </div>
 
@@ -249,7 +253,7 @@ export default function Insights() {
         <div className="bg-[var(--color-surface)] p-8 rounded-3xl border border-[var(--color-outline)] text-center space-y-4">
           <BrainCircuit className="mx-auto text-[var(--color-on-surface-variant)] stroke-1" size={48} />
           <div>
-            <h3 className="text-lg font-bold">No food items analyzed yet</h3>
+            <h3 className="text-lg font-medium">Nothing logged for this stretch</h3>
             <p className="text-xs text-[var(--color-on-surface-variant)] max-w-sm mx-auto mt-1">
               {view === 'daily' 
                 ? "Add your foods in the 'Food Log' tab using AI Search or Smart Scan to automatically compile chemical and industrial insights." 
@@ -263,11 +267,11 @@ export default function Insights() {
           <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] space-y-5">
             <div className="flex justify-between items-start gap-4">
               <div>
-                <span className="text-xs font-bold text-[var(--color-on-surface-variant)] uppercase tracking-wider">Industrial Food footprint</span>
-                <h3 className="text-xl font-extrabold mt-1">Ultra-Processed Food Ratio (UPF)</h3>
+                <span className="text-xs font-bold text-[var(--color-on-surface-variant)] tracking-wide">Industrial Food footprint</span>
+                <h3 className="text-xl font-medium mt-1">How processed the food was</h3>
               </div>
               <div className="text-right">
-                <span className={`text-4xl font-black ${currentUpfPercent > 50 ? 'text-red-500' : currentUpfPercent > 20 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                <span className={`text-4xl font-light ${currentUpfPercent > 50 ? 'text-red-500' : currentUpfPercent > 20 ? 'text-amber-500' : 'text-emerald-500'}`}>
                   {currentUpfPercent}%
                 </span>
                 <p className="text-[10px] text-[var(--color-on-surface-variant)] font-bold mt-1">OF CALORIES</p>
@@ -292,15 +296,15 @@ export default function Insights() {
             <div className="pt-4 border-t border-[var(--color-outline)] flex items-start gap-3 text-xs text-[var(--color-on-surface-variant)] font-medium leading-relaxed">
               <Info size={16} className="text-[var(--color-accent-kcal)] flex-shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-[var(--color-on-surface)]">NOVA Classification Auditing: </span>
-                Ultra-processed formulations (UPFs) contain industrial substances, trans fats, emulsifiers, and preservatives that may erode cardiovascular walls, micro-biome health, and blood glucose stability. Limiting UPFs to &lt;15% of calories is recommended.
+                <span className="font-medium text-[var(--color-on-surface)]">About the NOVA scale: </span>
+                NOVA sorts food by how much industrial processing it has been through, from whole ingredients up to formulations built from refined substances. It describes how a food was made, not whether eating it was a mistake.
               </div>
             </div>
           </div>
 
           {/* Micronutrient Dashboard */}
           <div className="space-y-4">
-            <h4 className="text-lg font-bold tracking-tight">Micronutrient Breakdown</h4>
+            <h4 className="text-lg font-medium tracking-tight">Micronutrients</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Dietary Fiber */}
               <div className="bg-[var(--color-surface)] p-5 rounded-3xl border border-[var(--color-outline)] flex flex-col justify-between gap-3 md:col-span-2">
@@ -319,7 +323,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentFiber} g</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Target: &ge;{fiberTarget} g</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Reference: &ge;{fiberTarget} g</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -347,7 +351,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentSodium} mg</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Limit: &lt;{microTargets.sodium.limit} mg</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Commonly under: &lt;{microTargets.sodium.limit} mg</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -375,7 +379,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentPotassium} mg</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Target: {microTargets.potassium.limit} mg</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Reference: {microTargets.potassium.limit} mg</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -403,7 +407,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentCalcium} mg</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Target: {microTargets.calcium.limit} mg</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Reference: {microTargets.calcium.limit} mg</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -431,7 +435,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentIron} mg</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Target: {microTargets.iron.limit} mg</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Reference: {microTargets.iron.limit} mg</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -459,7 +463,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentVitaminC} mg</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Target: {microTargets.vitaminC.limit} mg</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Reference: {microTargets.vitaminC.limit} mg</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -487,7 +491,7 @@ export default function Insights() {
                 <div>
                   <div className="flex justify-between text-xs font-bold mb-1">
                     <span>{currentVitaminD} mcg</span>
-                    <span className="text-[var(--color-on-surface-variant)]">Target: {microTargets.vitaminD.limit} mcg</span>
+                    <span className="text-[var(--color-on-surface-variant)]">Reference: {microTargets.vitaminD.limit} mcg</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--color-surface-variant)] rounded-full overflow-hidden">
                     <div 
@@ -502,7 +506,7 @@ export default function Insights() {
 
           {/* NOVA Classification breakdown list of current logged items */}
           <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] space-y-4">
-            <h3 className="text-lg font-bold flex items-center gap-2">
+            <h3 className="text-lg font-medium flex items-center gap-2">
               <Layers size={18} className="text-indigo-400" />
               Logged Food Processing Audit
             </h3>
@@ -544,11 +548,11 @@ export default function Insights() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Upsides (Benefits) */}
             <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] space-y-4">
-              <h4 className="font-bold text-base flex items-center gap-2 text-emerald-500">
-                <Leaf size={18} />
-                Ingredient Benefits
+              <h4 className="font-medium text-base flex items-center gap-2 text-[var(--color-on-surface)]">
+                <Leaf size={17} className="text-emerald-500/70" />
+                What these foods bring
               </h4>
-              <p className="text-xs text-[var(--color-on-surface-variant)]">Nutritive ingredients helping metabolic pathways and cell repair</p>
+              <p className="text-xs text-[var(--color-on-surface-variant)]">Noted, not scored.</p>
               
               <ul className="space-y-2 pt-2">
                 {advantages.map((adv, idx) => (
@@ -562,11 +566,11 @@ export default function Insights() {
 
             {/* Downsides (Warnings) */}
             <div className="bg-[var(--color-surface)] p-6 rounded-3xl border border-[var(--color-outline)] space-y-4">
-              <h4 className="font-bold text-base flex items-center gap-2 text-rose-500">
-                <ShieldAlert size={18} />
-                Watchouts & Risks
+              <h4 className="font-medium text-base flex items-center gap-2 text-[var(--color-on-surface)]">
+                <ShieldAlert size={17} className="text-amber-500/70" />
+                Worth knowing
               </h4>
-              <p className="text-xs text-[var(--color-on-surface-variant)]">Ingredient watchouts, preservatives, or inflammatory risks identified</p>
+              <p className="text-xs text-[var(--color-on-surface-variant)]">Things about these foods you might not have known. Nothing here is a mistake.</p>
               
               <ul className="space-y-2 pt-2">
                 {watchouts.map((w, idx) => (
@@ -577,7 +581,7 @@ export default function Insights() {
                 ))}
                 {watchouts.length === 0 && (
                   <li className="text-xs text-[var(--color-on-surface-variant)] italic">
-                    No urgent ingredient watchouts or high-sodium risks identified. Keep utilizing fresh raw elements.
+                    Nothing in particular to note about today's foods.
                   </li>
                 )}
               </ul>

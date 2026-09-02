@@ -15,6 +15,7 @@ const Insights = lazy(() => import('./components/Insights'));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/ui/Toaster';
 import { AISettings } from './components/AISettings';
+import { PauseSheet } from './components/PauseSheet';
 import { LayoutGrid, Plus, Target, BrainCircuit, Sparkles, Loader2 } from 'lucide-react';
 
 function TabLoading() {
@@ -66,7 +67,7 @@ export default function App() {
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'dashboard' ? 'text-[var(--color-on-surface)]' : 'text-[var(--color-on-surface-variant)]'}`}
           >
             <LayoutGrid size={24} />
-            <span className="text-[10px] font-bold">Dashboard</span>
+            <span className="text-[10px] font-medium">Today</span>
           </button>
           
           <button 
@@ -74,7 +75,7 @@ export default function App() {
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'targets' ? 'text-[var(--color-on-surface)]' : 'text-[var(--color-on-surface-variant)]'}`}
           >
             <Target size={24} />
-            <span className="text-[10px] font-bold">Targets</span>
+            <span className="text-[10px] font-medium">Reference</span>
           </button>
           
           <button 
@@ -90,7 +91,7 @@ export default function App() {
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'coach' ? 'text-[var(--color-on-surface)]' : 'text-[var(--color-on-surface-variant)]'}`}
           >
             <BrainCircuit size={24} />
-            <span className="text-[10px] font-bold">Coach</span>
+            <span className="text-[10px] font-medium">Reflect</span>
           </button>
           
           <button 
@@ -98,12 +99,13 @@ export default function App() {
             className={`flex flex-col items-center gap-1 p-2 transition-colors ${activeTab === 'insights' ? 'text-[var(--color-on-surface)]' : 'text-[var(--color-on-surface-variant)]'}`}
           >
             <Sparkles size={24} />
-            <span className="text-[10px] font-bold">Insights</span>
+            <span className="text-[10px] font-medium">Detail</span>
           </button>
         </div>
 
         <Toaster />
         <AISettings />
+        <PauseSheet />
       </div>
     </StoreProvider>
   );

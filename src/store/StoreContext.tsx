@@ -17,6 +17,8 @@ export type FoodEntry = Macro & {
   giIndex: string;
   satiety: string;
   isFavorite?: boolean;
+  /** Logged without numbers: the meal happened, that is all we claim. */
+  unmeasured?: boolean;
   repeat?: 'none' | 'daily' | 'weekly';
   sourceRepeatId?: string;
   repeatDayOfWeek?: number;
@@ -33,6 +35,28 @@ export type FoodEntry = Macro & {
   negatives?: string[];
 };
 
+/**
+ * A moment of looking at an urge before acting on it. The outcome is the only
+ * interesting part: whether it passed on its own once it was seen.
+ */
+export type PauseRecord = {
+  id: string;
+  time: string;
+  ts: number;
+  kind: 'body' | 'mood' | 'habit' | 'boredom' | 'company' | 'unsure';
+  outcome: 'ate' | 'passed';
+  looked: boolean;
+};
+
+export const PAUSE_KINDS: { key: PauseRecord['kind']; label: string; hint: string }[] = [
+  { key: 'body', label: 'Body hunger', hint: 'Emptiness, a real signal' },
+  { key: 'mood', label: 'A mood', hint: 'Something wants soothing' },
+  { key: 'habit', label: 'Habit', hint: 'This is when I always eat' },
+  { key: 'boredom', label: 'Boredom', hint: 'Nothing else is happening' },
+  { key: 'company', label: 'Company', hint: 'Others are eating' },
+  { key: 'unsure', label: 'Not sure', hint: 'Cannot tell yet' },
+];
+
 type DayData = {
   entries: FoodEntry[];
   dayType: 'heavy' | 'light';
@@ -40,9 +64,13 @@ type DayData = {
   isSaved?: boolean;
   /** Water drunk that day, in millilitres. */
   water?: number;
+  /** Urges looked at that day. */
+  pauses?: PauseRecord[];
+  /** The day has been closed out; nothing is carried into tomorrow. */
+  released?: boolean;
 };
 
-const emptyDay = (): DayData => ({ entries: [], dayType: 'heavy', burnedCalories: 47, isSaved: false, water: 0 });
+const emptyDay = (): DayData => ({ entries: [], dayType: 'heavy', burnedCalories: 47, isSaved: false, water: 0, pauses: [], released: false });
 
 export type TargetProfile = {
   id: string;
@@ -59,6 +87,8 @@ type State = {
   dayProfiles: Record<number, string>;
   /** Daily hydration goal in millilitres. */
   waterTarget: number;
+  /** Offer the pause before an entry is logged. */
+  pauseBeforeLogging: boolean;
 };
 
 export const STORAGE_KEY = 'nutrition_state_v5';
@@ -87,7 +117,8 @@ const initialState: State = {
   repeating: [],
   profiles: defaultProfiles,
   dayProfiles: defaultDayProfiles,
-  waterTarget: 2500
+  waterTarget: 2500,
+  pauseBeforeLogging: true
 };
 
 type StoreContextType = {
@@ -95,7 +126,6 @@ type StoreContextType = {
   setCurrentDate: (date: Date) => void;
   state: State;
   currentDayData: DayData;
-  weeklyDebt: number;
   addEntry: (entry: FoodEntry) => void;
   updateEntry: (id: string, updates: Partial<FoodEntry>) => void;
   deleteEntry: (id: string) => void;
@@ -110,6 +140,9 @@ type StoreContextType = {
   assignDayToProfile: (dayOfWeek: number, profileId: string) => void;
   addWater: (ml: number) => void;
   setWaterTarget: (ml: number) => void;
+  setPauseBeforeLogging: (on: boolean) => void;
+  recordPause: (pause: Omit<PauseRecord, 'id' | 'ts' | 'time'>) => void;
+  releaseDay: (released: boolean) => void;
   restoreEntry: (entry: FoodEntry, index: number) => void;
   exportData: () => string;
   importData: (json: string, mode: 'merge' | 'replace') => { days: number; entries: number };
@@ -308,6 +341,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 favorites: parsed.favorites || initialState.favorites,
                 repeating: parsed.repeating || initialState.repeating,
                 waterTarget: Number(parsed.waterTarget) || initialState.waterTarget,
+                pauseBeforeLogging: parsed.pauseBeforeLogging !== false,
               };
             }
           } catch (e) {
@@ -361,23 +395,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!currentDayData.entries.length) return;
     setState(prev => (prev.days[dateKey] ? prev : { ...prev, days: { ...prev.days, [dateKey]: currentDayData } }));
   }, [dateKey, currentDayData, state.days]);
-
-  const weeklyDebt = useMemo(() => {
-    let debt = 0;
-    const dayOfWeek = currentDate.getDay();
-    for (let i = 0; i < dayOfWeek; i++) {
-      const d = subDays(currentDate, dayOfWeek - i);
-      const k = format(d, 'yyyy-MM-dd');
-      const dayData = state.days?.[k];
-      if (dayData && dayData.entries && dayData.entries.length > 0) {
-        const consumed = dayData.entries.reduce((sum, e) => sum + (e.calories || 0), 0);
-        const profileId = state.dayProfiles?.[d.getDay()];
-        const target = state.profiles?.find(p => p.id === profileId)?.macros.calories || 2000;
-        debt += (consumed - target);
-      }
-    }
-    return Math.round(debt);
-  }, [state.days, currentDate, state.profiles, state.dayProfiles]);
 
   const mutateDay = (updater: (data: DayData) => DayData) => {
     setState(prev => ({
@@ -436,6 +453,20 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   };
 
+  const setPauseBeforeLogging = (on: boolean) => {
+    setState(prev => ({ ...prev, pauseBeforeLogging: on }));
+  };
+
+  const recordPause = (pause: Omit<PauseRecord, 'id' | 'ts' | 'time'>) => {
+    const now = new Date();
+    const record: PauseRecord = { ...pause, id: generateId(), ts: now.getTime(), time: format(now, 'h:mm a') };
+    mutateDay(data => ({ ...data, pauses: [record, ...(data.pauses || [])] }));
+  };
+
+  const releaseDay = (released: boolean) => {
+    mutateDay(data => ({ ...data, released }));
+  };
+
   const addWater = (ml: number) => {
     mutateDay(data => ({ ...data, water: Math.max(0, (data.water || 0) + ml) }));
   };
@@ -484,6 +515,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         profiles: Array.isArray(incoming.profiles) && incoming.profiles.length ? incoming.profiles : prev.profiles,
         dayProfiles: incoming.dayProfiles || prev.dayProfiles,
         waterTarget: Number(incoming.waterTarget) || prev.waterTarget,
+        pauseBeforeLogging: incoming.pauseBeforeLogging !== false,
       };
     });
 
@@ -569,10 +601,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   return (
     <StoreContext.Provider value={{
-      currentDate, setCurrentDate, state, currentDayData, weeklyDebt,
+      currentDate, setCurrentDate, state, currentDayData,
       addEntry, updateEntry, deleteEntry, toggleFavorite, updateDayType, setRepeating, saveDay,
       toggleTheme, addProfile, updateProfile, deleteProfile, assignDayToProfile,
-      addWater, setWaterTarget, restoreEntry, exportData, importData, saveError
+      addWater, setWaterTarget, setPauseBeforeLogging, recordPause, releaseDay,
+      restoreEntry, exportData, importData, saveError
     }}>
       {children}
     </StoreContext.Provider>

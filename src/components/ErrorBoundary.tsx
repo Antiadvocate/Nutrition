@@ -59,7 +59,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return (
       <div className="p-6 max-w-lg mx-auto space-y-5">
         <div className="space-y-2">
-          <h1 className="text-2xl font-black tracking-tight text-[var(--color-on-surface)]">Something broke</h1>
+          <h1 className="text-2xl font-light tracking-tight text-[var(--color-on-surface)]">Something broke</h1>
           <p className="text-xs text-[var(--color-on-surface-variant)] leading-relaxed">
             Reloading fixes most of these. Your logged data is untouched — only clear it as a last resort, and take a
             backup first.
@@ -73,7 +73,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="flex flex-col gap-2">
           <button
             onClick={() => window.location.reload()}
-            className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-black text-xs cursor-pointer active:scale-95 transition-transform"
+            className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-medium text-xs cursor-pointer active:scale-95 transition-transform"
           >
             Reload the app
           </button>

@@ -101,8 +101,9 @@ export async function generateCommentary(entries: any[], totals: any, targets: a
     Current: ${Math.round(totals.calories)} kcal, ${Math.round(totals.protein)}g protein, ${Math.round(totals.carbs)}g carbs, ${Math.round(totals.fats)}g fats.
     Foods eaten: ${entries.map(e => e.simpleName).join(', ') || 'Nothing yet'}.
 
-    Provide a short, witty, slightly existential but motivating commentary on their progress.
-    ${isEndOfDay ? 'This is the end of the day summary.' : ''}
+    Describe what the day has held. Do not grade it, do not congratulate, do not warn.
+    Two or three sentences, plain and unhurried, the way you would mention the weather.
+    ${isEndOfDay ? 'The day is closing.' : ''}
   `;
 
   return chatText({
@@ -118,7 +119,8 @@ export async function generateSatietyAnalysis(entries: any[]) {
     Analyze the satiety and glycemic impact of these foods:
     ${entries.map(e => `${e.simpleName} (GI: ${e.giIndex}, Satiety: ${e.satiety})`).join('\n')}
 
-    Provide a brief 2-sentence analysis of how full the user should feel and their energy stability.
+    In two sentences, describe how full this is likely to leave someone and how steady the energy is likely to be.
+    Describe, do not advise.
   `;
 
   return chatText({
@@ -202,7 +204,7 @@ export async function generateDailyBriefing(entries: any[], targets: any, totals
   )).join('\n');
 
   const prompt = `
-    You are an expert nutrition advisor and behavioral health coach. Look over today's nutrition logs and write a "Daily Briefing".
+    You are reflecting back someone's day of eating. You are a mirror, not a judge.
     Today's Profile Targets:
     - Calories: ${targets.calories} kcal
     - Protein: ${targets.protein}g
@@ -220,12 +222,19 @@ export async function generateDailyBriefing(entries: any[], targets: any, totals
     Logged Food Items:
     ${entrySummary || 'No food items logged yet for today.'}
 
-    Your goal is to write a highly customized daily briefing of 3 concise sections. Keep the tone existential, intelligent, direct, slightly witty but motivating:
-    1. **The Verdict**: Write 2 sentences on how today is going relative to their goals. Call out if they are overeating carbs, lacking protein, or hit their targets perfectly.
-    2. **Successes & Red Flags**: List 2 bullet points of things they did right (e.g., opted for low-glycemic, minimized ultra-processed foods, perfect potassium-to-sodium ratio) and 2 bullet points of things to watch out for/danger zones (e.g., excessive sodium, high ultra-processed food ratio, low fiber causing low satiety).
-    3. **Pantry Checklist**: Give 2 quick, concrete food ideas or behavior tweaks for their next meal to balance today's remaining macro/micro targets.
+    Write three short sections. Intelligent and direct, but with no praise, no blame and no
+    corrective urging. The reference numbers are a description of an intention, not a standard
+    to be met, and a day that sits far from them is not a failure.
 
-    Return the final response rendered in clean, beautiful Markdown.
+    1. **What the day held**: Two sentences describing what was eaten and where it sits relative
+       to the reference numbers. State it the way you would read a thermometer.
+    2. **What's worth noticing**: Two or three observations about the food itself — texture of the
+       day, how it is likely to have felt in the body, patterns present. Observations, not verdicts.
+       Never use the words good, bad, should, failed or deserve.
+    3. **An open question**: One question that hands attention back to them rather than instructing
+       them. Something they could answer from their own experience, not from the data.
+
+    Return clean Markdown. No preamble.
   `;
 
   return chatText({
@@ -255,23 +264,22 @@ export async function generateWeeklyBriefing(days: Record<string, any>, profiles
   }).join('\n');
 
   const prompt = `
-    You are an expert nutrition analyst and behavioral coach. Analyze the user's weekly log history and generate a "Weekly Coach Briefing".
+    You are describing the shape of someone's eating over recent days. A mirror, not a coach.
 
     Here is the recorded history of logs:
     ${daySummary || 'No weekly logs registered yet.'}
 
-    If there are no logs or very few, explain that a larger baseline is needed, but give some general actionable targets to strive for.
-    If logs exist, analyze:
-    - Calorie consistency (are they under or over-shooting targets on average?)
-    - Ultra-processed food dependency (what percentage of calories are ultra-processed NOVA 4?)
-    - Protein retention trend.
+    If there is little history, say so plainly and stop; do not fill the gap with generic advice.
 
-    Structure your Briefing with these 3 sections in clean Markdown:
-    1. **Weekly Scorecard**: Evaluate their calorie and macro compliance over the week.
-    2. **Strategic Blindspots**: Identify 2 specific things they need to watch out for (e.g. over-compensating on rest days, processed food heavy weekends, low protein density).
-    3. **Action Blueprint**: 2-3 specific behavioral shifts for the upcoming week based on their baseline data.
+    Structure it in clean Markdown as three short sections:
+    1. **The shape of it**: What the days look like taken together — steadiness, variation, rhythm.
+       Numbers where they help. No scoring, no percentage compliance.
+    2. **Patterns**: Two things that recur. Name them without recommending anything about them.
+       A pattern is information, not a problem.
+    3. **Worth sitting with**: One question about their own experience of these days that the data
+       cannot answer.
 
-    Ensure the style is professional, insightful, analytical, and highly structured.
+    Never use the words compliance, blindspot, deficit, cheat, discipline, should or failure.
   `;
 
   return chatText({
@@ -292,7 +300,9 @@ export async function askCoach(question: string, context: { targets: any; totals
 
         Question: "${question}"
 
-        Provide a helpful, precise, slightly existential but deeply professional and encouraging layout answer. Use clear Markdown sections if helpful.
+        Answer plainly and specifically. Where the honest answer is "it depends on what you notice",
+        say that rather than inventing a rule. Do not moralise about any food. Use Markdown sections
+        only if they genuinely help.
       `;
 
   return chatText({

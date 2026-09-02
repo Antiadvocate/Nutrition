@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
 import { useStore } from '../store/StoreContext';
-import { Download, Upload, Database, Droplets, Trash2, AlertTriangle } from 'lucide-react';
+import { Download, Upload, Database, Droplets, AlertTriangle, Wind } from 'lucide-react';
 import { toast } from './ui/Toaster';
 import { format } from 'date-fns';
 
 export default function DataPanel() {
-  const { state, exportData, importData, setWaterTarget, saveError } = useStore();
+  const { state, exportData, importData, setWaterTarget, setPauseBeforeLogging, saveError } = useStore();
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<string | null>(null);
 
@@ -60,11 +60,34 @@ export default function DataPanel() {
         </div>
       )}
 
+      {/* The pause */}
+      <div className="bg-[var(--color-surface)] p-5 rounded-3xl border border-[var(--color-outline)] shadow-xs space-y-3">
+        <div className="flex items-center gap-2">
+          <Wind size={13} className="opacity-50" />
+          <h3 className="text-[11px] font-medium tracking-wide text-[var(--color-on-surface-variant)]">
+            The pause
+          </h3>
+        </div>
+        <p className="text-[11px] text-[var(--color-on-surface-variant)] leading-relaxed">
+          A beat between the impulse and the eating, offered before anything is logged. It never blocks you —
+          carrying on is one tap — and an urge that gets looked at often unties itself.
+        </p>
+        <label className="flex items-center gap-3 cursor-pointer pt-1">
+          <input
+            type="checkbox"
+            checked={state.pauseBeforeLogging}
+            onChange={e => setPauseBeforeLogging(e.target.checked)}
+            className="w-4 h-4 accent-[var(--color-on-surface)] cursor-pointer"
+          />
+          <span className="text-[12px] font-medium text-[var(--color-on-surface)]">Offer it before logging</span>
+        </label>
+      </div>
+
       {/* Hydration goal */}
       <div className="bg-[var(--color-surface)] p-5 rounded-3xl border border-[var(--color-outline)] shadow-xs space-y-3">
         <div className="flex items-center gap-2">
           <Droplets size={14} className="text-sky-500" />
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
+          <h3 className="text-[10px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">
             Hydration goal
           </h3>
         </div>
@@ -85,7 +108,7 @@ export default function DataPanel() {
       <div className="bg-[var(--color-surface)] p-5 rounded-3xl border border-[var(--color-outline)] shadow-xs space-y-3">
         <div className="flex items-center gap-2">
           <Database size={14} className="text-emerald-500" />
-          <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
+          <h3 className="text-[10px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">
             Backup & restore
           </h3>
         </div>
@@ -101,13 +124,13 @@ export default function DataPanel() {
             <div className="flex gap-2">
               <button
                 onClick={() => runImport('merge')}
-                className="flex-1 bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-2.5 rounded-xl font-black text-[11px] cursor-pointer active:scale-95 transition-transform"
+                className="flex-1 bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-2.5 rounded-xl font-medium text-[11px] cursor-pointer active:scale-95 transition-transform"
               >
                 Merge (keep my days)
               </button>
               <button
                 onClick={() => runImport('replace')}
-                className="flex-1 border border-rose-500/40 text-rose-500 py-2.5 rounded-xl font-black text-[11px] cursor-pointer active:scale-95 transition-transform"
+                className="flex-1 border border-rose-500/40 text-rose-500 py-2.5 rounded-xl font-medium text-[11px] cursor-pointer active:scale-95 transition-transform"
               >
                 Replace everything
               </button>
@@ -123,14 +146,14 @@ export default function DataPanel() {
           <div className="flex gap-2">
             <button
               onClick={handleExport}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] border border-[var(--color-outline)] text-[var(--color-on-surface)] py-2.5 rounded-xl font-black text-[11px] transition-all active:scale-95 cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] border border-[var(--color-outline)] text-[var(--color-on-surface)] py-2.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 cursor-pointer"
             >
               <Download size={12} />
               <span>Export backup</span>
             </button>
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] border border-[var(--color-outline)] text-[var(--color-on-surface)] py-2.5 rounded-xl font-black text-[11px] transition-all active:scale-95 cursor-pointer"
+              className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] border border-[var(--color-outline)] text-[var(--color-on-surface)] py-2.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 cursor-pointer"
             >
               <Upload size={12} />
               <span>Restore backup</span>

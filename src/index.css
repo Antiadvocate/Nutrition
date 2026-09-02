@@ -104,3 +104,24 @@ h1, h2, h3, .font-display {
 .glow-fiber {
   filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
 }
+
+
+/*
+ * Motion here is meant to settle rather than announce. Long, eased transitions,
+ * no bouncing, and nothing that pulses for attention. Anyone who has asked their
+ * system for less movement gets none of it.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.animate-pulse {
+  animation-duration: 4s;
+}

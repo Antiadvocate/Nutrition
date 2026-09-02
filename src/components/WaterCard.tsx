@@ -20,11 +20,11 @@ export default function WaterCard() {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Droplets size={14} className="text-sky-500" />
-          <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
+          <span className="text-[10px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">
             Hydration
           </span>
         </div>
-        <span className="text-[11px] font-mono font-black text-[var(--color-on-surface)]">
+        <span className="text-[11px] font-mono font-medium text-[var(--color-on-surface)]">
           {(drunk / 1000).toFixed(2)}
           <span className="text-[var(--color-on-surface-variant)] font-medium"> / {(target / 1000).toFixed(1)} L</span>
         </span>
@@ -41,7 +41,7 @@ export default function WaterCard() {
           />
         ))}
         {glasses > targetGlasses && (
-          <span className="h-6 px-2 rounded-md bg-sky-500/20 border border-sky-500/40 text-[10px] font-black text-sky-500 flex items-center">
+          <span className="h-6 px-2 rounded-md bg-sky-500/20 border border-sky-500/40 text-[10px] font-medium text-sky-500 flex items-center">
             +{glasses - targetGlasses}
           </span>
         )}
@@ -50,14 +50,14 @@ export default function WaterCard() {
       <div className="flex items-center gap-2">
         <button
           onClick={() => addWater(GLASS_ML)}
-          className="flex-1 flex items-center justify-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-600 dark:text-sky-400 py-2.5 rounded-xl font-black text-[11px] transition-all active:scale-95 cursor-pointer"
+          className="flex-1 flex items-center justify-center gap-1.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/25 text-sky-600 dark:text-sky-400 py-2.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 cursor-pointer"
         >
           <Droplets size={12} />
           <span>Glass · 250 ml</span>
         </button>
         <button
           onClick={() => addWater(500)}
-          className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] border border-[var(--color-outline)] text-[var(--color-on-surface)] py-2.5 rounded-xl font-black text-[11px] transition-all active:scale-95 cursor-pointer"
+          className="flex-1 flex items-center justify-center gap-1.5 bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] border border-[var(--color-outline)] text-[var(--color-on-surface)] py-2.5 rounded-xl font-medium text-[11px] transition-all active:scale-95 cursor-pointer"
         >
           <span>Bottle · 500 ml</span>
         </button>

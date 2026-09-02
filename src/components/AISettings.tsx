@@ -98,7 +98,7 @@ export function AISettings() {
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black text-[var(--color-on-surface)] tracking-tight font-display flex items-center gap-2">
+                <h2 className="text-2xl font-light text-[var(--color-on-surface)] tracking-tight font-display flex items-center gap-2">
                   <Cpu size={20} className="text-purple-400" />
                   <span>AI Engine</span>
                 </h2>
@@ -117,7 +117,7 @@ export function AISettings() {
 
             {/* API key */}
             <section className="space-y-2">
-              <label className="text-[9px] font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)] flex items-center gap-1.5">
+              <label className="text-[9px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)] flex items-center gap-1.5">
                 <KeyRound size={11} className="text-amber-500" />
                 <span>OpenRouter API Key</span>
               </label>
@@ -151,7 +151,7 @@ export function AISettings() {
                 <button
                   onClick={handleTest}
                   disabled={testing || !config.apiKey}
-                  className="text-[10px] font-black uppercase tracking-wider bg-[var(--color-surface-variant)] border border-[var(--color-outline)] px-3 py-1.5 rounded-full text-[var(--color-on-surface)] disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
+                  className="text-[10px] font-medium tracking-wide bg-[var(--color-surface-variant)] border border-[var(--color-outline)] px-3 py-1.5 rounded-full text-[var(--color-on-surface)] disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
                 >
                   {testing ? <Loader2 size={11} className="animate-spin" /> : <Check size={11} className="text-emerald-500" />}
                   <span>Test connection</span>
@@ -166,7 +166,7 @@ export function AISettings() {
             {/* Models */}
             <section className="space-y-4 pt-4 border-t border-[var(--color-outline)]">
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-[var(--color-on-surface-variant)]">
+                <span className="text-[9px] font-mono font-bold tracking-wide text-[var(--color-on-surface-variant)]">
                   Models
                 </span>
                 <button
@@ -216,7 +216,7 @@ export function AISettings() {
 
             <button
               onClick={() => setOpen(false)}
-              className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-black text-xs transition-all active:scale-95 cursor-pointer"
+              className="w-full bg-[var(--color-on-surface)] text-[var(--color-bg-base)] py-3.5 rounded-xl font-medium text-xs transition-all active:scale-95 cursor-pointer"
             >
               Done
             </button>
@@ -255,7 +255,7 @@ function ModelPicker({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-[11px] font-black text-[var(--color-on-surface)]">{label}</label>
+      <label className="text-[11px] font-medium text-[var(--color-on-surface)]">{label}</label>
       <p className="text-[10px] text-[var(--color-on-surface-variant)] leading-relaxed">{hint}</p>
       <input
         type="search"

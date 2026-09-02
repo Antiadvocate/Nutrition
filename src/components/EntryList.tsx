@@ -12,8 +12,8 @@ export default function EntryList() {
 
   return (
     <div className="px-4 py-6 pb-32 max-w-2xl mx-auto">
-      <h2 className="text-xs font-mono font-black uppercase tracking-widest text-[var(--color-on-surface-variant)] flex items-center gap-2 mb-4">
-        <span>Logged Dietary Items ({entries.length})</span>
+      <h2 className="text-xs font-mono font-medium tracking-wide text-[var(--color-on-surface-variant)] flex items-center gap-2 mb-4">
+        <span>What you ate ({entries.length})</span>
       </h2>
       <div className="space-y-3">
         <AnimatePresence initial={false}>
@@ -279,7 +279,7 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
           {/* Description container */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <h3 className="font-extrabold text-[var(--color-on-surface)] truncate text-sm sm:text-base tracking-tight leading-tight">
+              <h3 className="font-medium text-[var(--color-on-surface)] truncate text-sm sm:text-base tracking-tight leading-tight">
                 {entry.simpleName}
               </h3>
               
@@ -301,7 +301,7 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
               {entry.time && (
                 <>
                   <span className="opacity-30">•</span>
-                  <span className="font-mono text-[10px] font-black bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded border border-black/10 dark:border-white/10 text-[var(--color-on-surface)] leading-none">
+                  <span className="font-mono text-[10px] font-medium bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded border border-black/10 dark:border-white/10 text-[var(--color-on-surface)] leading-none">
                     {entry.time}
                   </span>
                 </>
@@ -322,8 +322,12 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
 
         {/* Right Side: Calories box + Chevron down */}
         <div className="flex items-center gap-2.5 flex-shrink-0">
-          <span className="font-mono font-black text-xs sm:text-sm bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 px-2.5 py-1 rounded-lg shadow-3xs leading-none">
-            {Math.round(entry.calories)} kcal
+          <span className={`font-mono text-xs sm:text-sm px-2.5 py-1 rounded-lg leading-none border ${
+            entry.unmeasured
+              ? 'bg-transparent text-[var(--color-on-surface-variant)] border-dashed border-[var(--color-outline)]'
+              : 'bg-[var(--color-surface-variant)] text-[var(--color-on-surface)] border-[var(--color-outline)]'
+          }`}>
+            {entry.unmeasured ? 'not counted' : `${Math.round(entry.calories)} kcal`}
           </span>
           <motion.div
             animate={{ rotate: isExpandedActive ? 180 : 0 }}
@@ -347,16 +351,16 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
             className="overflow-hidden"
           >
             {/* Structured Full-width Macro Nutrition Strip */}
-            <div className="mt-3.5 bg-black/5 dark:bg-black/30 border border-black/10 dark:border-white/5 px-3 py-2 rounded-xl flex justify-between items-center text-xs font-mono font-black text-[var(--color-on-surface-variant)] shadow-3xs">
-              <div className="flex items-center gap-1">P: <strong className="text-[var(--color-on-surface)] font-black">{Math.round(entry.protein)}g</strong></div>
+            <div className="mt-3.5 bg-black/5 dark:bg-black/30 border border-black/10 dark:border-white/5 px-3 py-2 rounded-xl flex justify-between items-center text-xs font-mono font-medium text-[var(--color-on-surface-variant)] shadow-3xs">
+              <div className="flex items-center gap-1">P: <strong className="text-[var(--color-on-surface)] font-medium">{Math.round(entry.protein)}g</strong></div>
               <div className="text-[var(--color-outline)]/30">•</div>
-              <div className="flex items-center gap-1">C: <strong className="text-[var(--color-on-surface)] font-black">{Math.round(entry.carbs)}g</strong></div>
+              <div className="flex items-center gap-1">C: <strong className="text-[var(--color-on-surface)] font-medium">{Math.round(entry.carbs)}g</strong></div>
               <div className="text-[var(--color-outline)]/30">•</div>
-              <div className="flex items-center gap-1">F: <strong className="text-[var(--color-on-surface)] font-black">{Math.round(entry.fats)}g</strong></div>
+              <div className="flex items-center gap-1">F: <strong className="text-[var(--color-on-surface)] font-medium">{Math.round(entry.fats)}g</strong></div>
               {entry.fiber !== undefined && entry.fiber > 0 && (
                 <>
                   <div className="text-[var(--color-outline)]/30">•</div>
-                  <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">Fib: <strong className="font-black">{Math.round(entry.fiber)}g</strong></div>
+                  <div className="flex items-center gap-1 text-cyan-600 dark:text-cyan-400">Fib: <strong className="font-medium">{Math.round(entry.fiber)}g</strong></div>
                 </>
               )}
             </div>
@@ -468,11 +472,11 @@ const EntryRow: React.FC<{ entry: FoodEntry; index: number }> = ({ entry, index 
                       e.stopPropagation();
                       setIsEditing(true);
                     }}
-                    className="text-[10px] font-mono font-black uppercase tracking-widest text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] bg-[var(--color-surface-variant)] hover:bg-[var(--color-surface-variant)]/80 px-2.5 py-1.5 rounded-lg border border-[var(--color-outline)]/40 hover:border-[var(--color-outline)] transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    title="Adjust serving quantity or log time"
+                    className="text-[10px] font-mono font-medium tracking-wide text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] bg-[var(--color-surface-variant)] hover:bg-[var(--color-surface-variant)]/80 px-2.5 py-1.5 rounded-lg border border-[var(--color-outline)]/40 hover:border-[var(--color-outline)] transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                    title="Adjust the portion or time"
                   >
                     <Edit2 size={10} className="stroke-[2.5px]" />
-                    <span>Adjust Details</span>
+                    <span>Adjust</span>
                   </button>
                 )}
               </div>
