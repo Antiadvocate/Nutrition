@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useStore } from '../store/StoreContext';
-import { generateDailyBriefing, generateWeeklyBriefing } from '../lib/ai';
-import { GoogleGenAI } from '@google/genai';
+import { generateDailyBriefing, generateWeeklyBriefing, askCoach } from '../lib/ai';
 import { 
   Loader2, 
   Send, 
@@ -91,9 +90,9 @@ export default function AICoach() {
       const result = await generateDailyBriefing(entries, targets.macros, totals);
       setDailyBrief(result);
       localStorage.setItem(cacheKey, result);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setDailyBrief("The Void has experienced an obstruction. Ensure you have an active internet connection or try again shortly.");
+      setDailyBrief(`The Void has experienced an obstruction.\n\n\`${e?.message || 'Unknown error'}\``);
     } finally {
       setLoadingDaily(false);
     }
@@ -115,9 +114,9 @@ export default function AICoach() {
       const result = await generateWeeklyBriefing(state.days || {}, state.profiles || [], state.dayProfiles || {});
       setWeeklyBrief(result);
       localStorage.setItem(cacheKey, result);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      setWeeklyBrief("Error formulating your weekly breakdown. Try recording more daily tallies to complete the baseline.");
+      setWeeklyBrief(`Error formulating your weekly breakdown.\n\n\`${e?.message || 'Unknown error'}\``);
     } finally {
       setLoadingWeekly(false);
     }
@@ -140,28 +139,16 @@ export default function AICoach() {
 
     setChatLoading(true);
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const prompt = `
-        A user has a nutrition question. Here is their data for today:
-        - Targets: ${targets.macros.calories} kcal, ${targets.macros.protein}g protein, ${targets.macros.carbs}g carbs, ${targets.macros.fats}g fats
-        - Current totals: ${Math.round(totals.calories)} kcal, ${Math.round(totals.protein)}g protein, ${Math.round(totals.carbs)}g carbs, ${Math.round(totals.fats)}g fats
-        - Foods eaten: ${entries.map(e => e.simpleName).join(', ') || 'None'}
-
-        Question: "${question}"
-        
-        Provide a helpful, precise, slightly existential but deeply professional and encouraging layout answer. Use clear Markdown sections if helpful.
-      `;
-
-      const res = await ai.models.generateContent({
-        model: 'gemini-3.5-flash',
-        contents: prompt
+      const answer = await askCoach(question, {
+        targets: targets.macros,
+        totals,
+        entries,
       });
 
-      setChatResponse(res.text!);
-    } catch (error) {
+      setChatResponse(answer);
+    } catch (error: any) {
       console.error(error);
-      setChatResponse("The coaching intelligence is temporarily silent. Check your credential parameters.");
+      setChatResponse(`The coaching intelligence is temporarily silent.\n\n\`${error?.message || 'Unknown error'}\``);
     } finally {
       setChatLoading(false);
     }

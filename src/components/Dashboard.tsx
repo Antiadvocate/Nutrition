@@ -25,11 +25,13 @@ import {
   Activity, 
   Lightbulb,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  Settings2
 } from 'lucide-react';
 import { autoCompleteDayMeals } from '../lib/ai';
 import { generateId } from '../lib/utils';
 import { toast } from './ui/Toaster';
+import { openAISettings } from './AISettings';
 
 type TimeWindow = '1W' | '1M' | '3M' | '6M' | 'Custom';
 
@@ -133,10 +135,10 @@ export default function Dashboard() {
         });
         toast(`Populated ${generated.length} basic meals to hit targets perfectly!`);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
       if (currentGenId === generationRef.current) {
-        toast("Quota limits reached. Please use 'Quick Add' or try again in 30s.");
+        toast(e?.message || "Pre-fill failed. Check your AI settings and try again.");
       }
     } finally {
       if (currentGenId === generationRef.current) {
@@ -228,6 +230,15 @@ export default function Dashboard() {
             Biometric Log
           </h1>
         </div>
+
+        <button
+          onClick={openAISettings}
+          className="self-start md:self-auto flex items-center gap-2 bg-[var(--color-surface)] border border-[var(--color-outline)] hover:bg-[var(--color-surface-variant)] px-3.5 py-2 rounded-full text-[10px] font-black uppercase tracking-wider text-[var(--color-on-surface-variant)] hover:text-[var(--color-on-surface)] transition-all active:scale-95 cursor-pointer shadow-3xs"
+          title="AI engine & models"
+        >
+          <Settings2 size={13} className="text-purple-400" />
+          <span>AI Engine</span>
+        </button>
       </div>
 
       {/* Main Focus: Daily Goals & Rings */}

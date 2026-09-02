@@ -10,6 +10,7 @@ import Targets from './components/Targets';
 import Insights from './components/Insights';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './components/ui/Toaster';
+import { AISettings } from './components/AISettings';
 import { LayoutGrid, Plus, Target, BrainCircuit, Sparkles } from 'lucide-react';
 
 export default function App() {
@@ -80,6 +81,7 @@ export default function App() {
         </div>
 
         <Toaster />
+        <AISettings />
       </div>
     </StoreProvider>
   );
