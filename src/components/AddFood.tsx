@@ -3,7 +3,7 @@ import { Scan, Search, Sparkles, Zap, BookOpen, Loader2, Camera, X, Plus } from 
 import { useStore } from '../store/StoreContext';
 import { analyzeFood } from '../lib/ai';
 import { format } from 'date-fns';
-import { generateId } from '../lib/utils';
+import { generateId, readImageDownscaled } from '../lib/utils';
 import { toast } from './ui/Toaster';
 
 export default function AddFood() {
@@ -26,18 +26,19 @@ export default function AddFood() {
   // AI State
   const [aiPrompt, setAiPrompt] = useState('');
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const files: File[] = Array.from(e.target.files);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          setImages(prev => [...prev, ev.target!.result as string]);
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of files) {
+      try {
+        const dataUrl = await readImageDownscaled(file);
+        setImages(prev => [...prev, dataUrl]);
+      } catch (err: any) {
+        console.error(err);
+        toast(err?.message || 'Could not read that image.');
+      }
+    }
+    e.target.value = '';
   };
 
   const handleLog = async (isScan = false, isAi = false) => {
@@ -69,7 +70,7 @@ export default function AddFood() {
       setActiveTab('search');
     } catch (e: any) {
       console.error(e);
-      toast("AI Quota exceeded! Please wait 60 seconds or use 'Quick Add'.");
+      toast(e?.message || "Analysis failed. Check your AI settings or use 'Quick Add'.");
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../store/StoreContext';
-import { Moon, Sun, ArrowLeft } from 'lucide-react';
+import { Moon, Sun, ArrowLeft, Settings2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { openAISettings } from './AISettings';
 
 export default function Header() {
   const { currentDayData, state, toggleTheme, currentDate } = useStore();
@@ -24,13 +25,23 @@ export default function Header() {
 
   return (
     <header className="px-4 pt-10 pb-4 flex items-center justify-between glass-card border-b border-[var(--color-outline)] sticky top-0 z-50 transition-all duration-300">
-      <button 
-        onClick={toggleTheme} 
-        className="w-10 h-10 rounded-full bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] flex items-center justify-center text-[var(--color-on-surface)] transition-all active:scale-90 shadow-2xs cursor-pointer"
-        aria-label="Toggle Theme"
-      >
-        {state.theme === 'dark' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-zinc-600" />}
-      </button>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={toggleTheme} 
+          className="w-10 h-10 rounded-full bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] flex items-center justify-center text-[var(--color-on-surface)] transition-all active:scale-90 shadow-2xs cursor-pointer"
+          aria-label="Toggle Theme"
+        >
+          {state.theme === 'dark' ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-zinc-600" />}
+        </button>
+        <button
+          onClick={openAISettings}
+          className="w-10 h-10 rounded-full bg-[var(--color-surface-variant)] hover:bg-[var(--color-outline)] flex items-center justify-center text-[var(--color-on-surface)] transition-all active:scale-90 shadow-2xs cursor-pointer"
+          aria-label="AI Settings"
+          title="AI engine & models"
+        >
+          <Settings2 size={17} className="text-purple-400" />
+        </button>
+      </div>
       
       <div className="px-3.5 py-1.5 rounded-full bg-[var(--color-surface-variant)] font-mono text-[11px] font-bold text-[var(--color-on-surface)] tracking-tight">
         {format(now, 'h:mm a')}

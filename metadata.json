@@ -1,5 +1,5 @@
 {
-  "name": "",
-  "description": "",
+  "name": "Nutrition",
+  "description": "Nutrition tracking with AI food analysis powered by OpenRouter.",
   "requestFramePermissions": []
 }
